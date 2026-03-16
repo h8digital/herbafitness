@@ -15,8 +15,6 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
     full_name: profile.full_name || '',
     phone: profile.phone || '',
     cpf: profile.cpf || '',
-    cnpj: profile.cnpj || '',
-    company_name: profile.company_name || '',
     address_zip: profile.address_zip || '',
     address_street: profile.address_street || '',
     address_number: profile.address_number || '',
@@ -112,16 +110,6 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
           <div>
             <label className={labelClass}>CPF</label>
             <input className={inputClass} value={form.cpf} onChange={e => set('cpf', e.target.value)} placeholder="000.000.000-00" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>CNPJ (opcional)</label>
-            <input className={inputClass} value={form.cnpj} onChange={e => set('cnpj', e.target.value)} placeholder="00.000.000/0001-00" />
-          </div>
-          <div>
-            <label className={labelClass}>Razão Social (opcional)</label>
-            <input className={inputClass} value={form.company_name} onChange={e => set('company_name', e.target.value)} placeholder="Nome da empresa" />
           </div>
         </div>
       </div>

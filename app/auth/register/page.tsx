@@ -13,7 +13,7 @@ export default function RegisterPage() {
 
   const [form, setForm] = useState({
     full_name: '', email: '', password: '', confirm_password: '',
-    phone: '', cpf: '', cnpj: '', company_name: '',
+    phone: '', cpf: '',
     address_zip: '', address_street: '', address_number: '',
     address_complement: '', address_neighborhood: '', address_city: '', address_state: '',
   })
@@ -47,12 +47,11 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
 
-    // 1. Criar usuário no Auth
     const { data, error: signupError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
-        data: { full_name: form.full_name }
+        data: { full_name: form.full_name, role: 'customer' }
       }
     })
 
@@ -62,30 +61,18 @@ export default function RegisterPage() {
       return
     }
 
-    // 2. Criar perfil diretamente (upsert garante que funciona mesmo sem trigger)
-    const { error: profileError } = await supabase.from('profiles').upsert({
-      id: data.user.id,
-      email: form.email,
+    await supabase.from('profiles').update({
       full_name: form.full_name,
-      role: 'customer',
-      status: 'pending',
-      phone: form.phone || null,
-      cpf: form.cpf || null,
-      cnpj: form.cnpj || null,
-      company_name: form.company_name || null,
-      address_zip: form.address_zip || null,
-      address_street: form.address_street || null,
-      address_number: form.address_number || null,
-      address_complement: form.address_complement || null,
-      address_neighborhood: form.address_neighborhood || null,
-      address_city: form.address_city || null,
-      address_state: form.address_state || null,
-    })
-
-    if (profileError) {
-      console.error('Erro ao criar perfil:', profileError)
-      // Mesmo com erro no perfil, o usuário foi criado — continua
-    }
+      phone: form.phone,
+      cpf: form.cpf,
+      address_zip: form.address_zip,
+      address_street: form.address_street,
+      address_number: form.address_number,
+      address_complement: form.address_complement,
+      address_neighborhood: form.address_neighborhood,
+      address_city: form.address_city,
+      address_state: form.address_state,
+    }).eq('id', data.user.id)
 
     setDone(true)
     setLoading(false)
@@ -104,7 +91,7 @@ export default function RegisterPage() {
             Cadastro Enviado!
           </h2>
           <p className="text-slate-500 mb-6">
-            Seu cadastro foi enviado para aprovação. Você será notificado quando for aprovado.
+            Seu cadastro foi enviado para aprovação. Você será notificado por email quando for aprovado.
           </p>
           <Link href="/auth/login" className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors">
             Voltar ao Login
@@ -132,7 +119,9 @@ export default function RegisterPage() {
         <div className="flex items-center justify-center gap-2 mb-6">
           {[1, 2, 3].map(s => (
             <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${step >= s ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-500'}`}>{s}</div>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                step >= s ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-500'
+              }`}>{s}</div>
               {s < 3 && <div className={`w-12 h-0.5 ${step > s ? 'bg-orange-500' : 'bg-slate-200'}`} />}
             </div>
           ))}
@@ -155,7 +144,7 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <label className={labelClass}>Senha</label>
-                  <input type="password" className={inputClass} value={form.password} onChange={e => set('password', e.target.value)} placeholder="Mínimo 6 caracteres" minLength={6} required />
+                  <input type="password" className={inputClass} value={form.password} onChange={e => set('password', e.target.value)} placeholder="Mínimo 8 caracteres" minLength={8} required />
                 </div>
                 <div>
                   <label className={labelClass}>Confirmar Senha</label>
@@ -167,7 +156,7 @@ export default function RegisterPage() {
             {/* Passo 2: Dados pessoais */}
             {step === 2 && (
               <div className="space-y-4">
-                <h3 className="font-semibold text-slate-900 mb-4" style={{fontFamily:'var(--font-display)'}}>Dados Pessoais / Empresa</h3>
+                <h3 className="font-semibold text-slate-900 mb-4" style={{fontFamily:'var(--font-display)'}}>Dados Pessoais</h3>
                 <div>
                   <label className={labelClass}>Telefone</label>
                   <input className={inputClass} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(11) 99999-9999" />
@@ -175,14 +164,6 @@ export default function RegisterPage() {
                 <div>
                   <label className={labelClass}>CPF</label>
                   <input className={inputClass} value={form.cpf} onChange={e => set('cpf', e.target.value)} placeholder="000.000.000-00" />
-                </div>
-                <div>
-                  <label className={labelClass}>CNPJ (opcional)</label>
-                  <input className={inputClass} value={form.cnpj} onChange={e => set('cnpj', e.target.value)} placeholder="00.000.000/0001-00" />
-                </div>
-                <div>
-                  <label className={labelClass}>Razão Social / Nome Fantasia (opcional)</label>
-                  <input className={inputClass} value={form.company_name} onChange={e => set('company_name', e.target.value)} placeholder="Nome da empresa" />
                 </div>
               </div>
             )}
@@ -193,9 +174,12 @@ export default function RegisterPage() {
                 <h3 className="font-semibold text-slate-900 mb-4" style={{fontFamily:'var(--font-display)'}}>Endereço de Entrega</h3>
                 <div>
                   <label className={labelClass}>CEP</label>
-                  <input className={inputClass} value={form.address_zip}
+                  <input
+                    className={inputClass}
+                    value={form.address_zip}
                     onChange={e => { set('address_zip', e.target.value); fetchCEP(e.target.value) }}
-                    placeholder="00000-000" />
+                    placeholder="00000-000"
+                  />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2">

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Product, Category } from '@/types'
 import { slugify } from '@/lib/utils'
+import ImageCropUpload from '@/components/ui/ImageCropUpload'
 
 interface ProductFormProps {
   product?: Product
@@ -288,30 +289,58 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
 
           {/* ── IMAGEM ── */}
           {activeTab === 'imagens' && (
-            <div className="space-y-4">
-              <div>
-                <label className={lc}>URL da Imagem Principal</label>
-                <input className={ic} value={form.image_url} onChange={e => set('image_url', e.target.value)}
-                  placeholder="https://url-da-imagem.com/foto.jpg" />
-                <p className="text-xs text-slate-400 mt-1.5">
-                  Cole a URL da imagem. Formatos aceitos: JPG, PNG, WebP
-                </p>
+            <div className="space-y-5">
+              <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-sm text-green-800">
+                📸 A imagem é <strong>enviada e salva no servidor</strong> (Supabase Storage). O crop garante a proporção <strong>3×4</strong> ideal para exibição nos cards de produto.
               </div>
-              {form.image_url ? (
-                <div className="relative group">
-                  <img src={form.image_url} alt="Preview"
-                    className="w-full max-h-64 object-contain rounded-2xl border border-slate-200 bg-slate-50" />
-                  <button type="button" onClick={() => set('image_url', '')}
-                    className="absolute top-2 right-2 bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                    ✕
-                  </button>
+
+              <div className="flex gap-6 items-start">
+                {/* Upload com crop */}
+                <div className="flex-shrink-0">
+                  <ImageCropUpload
+                    label="Imagem Principal"
+                    value={form.image_url}
+                    folder="products"
+                    aspectRatio="3/4"
+                    onChange={(url, path) => {
+                      set('image_url', url)
+                    }}
+                  />
                 </div>
-              ) : (
-                <div className="w-full h-40 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300 bg-slate-50">
-                  <span className="text-4xl mb-2">🖼️</span>
-                  <p className="text-sm">Nenhuma imagem</p>
+
+                {/* Dicas */}
+                <div className="flex-1 space-y-3 pt-6">
+                  <div className="space-y-2 text-sm text-slate-600">
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>Clique na área para selecionar uma foto</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>Arraste para enquadrar o produto</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>A imagem é salva em <strong>600×800px</strong> (proporção 3×4)</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>Formato WebP otimizado para web</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>Aceita JPG, PNG ou WebP até 10MB</span>
+                    </div>
+                  </div>
+
+                  {form.image_url && (
+                    <button type="button" onClick={() => set('image_url', '')}
+                      className="text-xs text-red-400 hover:text-red-600 underline transition-colors">
+                      Remover imagem
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           )}
 
