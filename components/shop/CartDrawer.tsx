@@ -75,7 +75,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 <div key={item.product.name + item.product.id} className="flex gap-3 p-3 rounded-2xl border" style={{ borderColor: '#e8f5e9' }}>
                   <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0" style={{ background: '#f1f8f1' }}>
                     {item.product.images?.[0]?.url
-                      ? <img src={item.product.images[0].url} alt={item.product.name} className="w-full h-full object-cover" />
+                      ? <img src={item.product.images[0].url} alt={item.product.name} className="w-full h-full object-contain p-1" />
                       : <div className="w-full h-full flex items-center justify-center text-2xl">📦</div>}
                   </div>
                   <div className="flex-1 min-w-0">

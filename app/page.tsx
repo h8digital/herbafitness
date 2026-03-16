@@ -123,9 +123,9 @@ export default async function PublicPage({ searchParams }: { searchParams: Promi
           <div className="grid grid-cols-2 gap-3 px-4">
             {products.map((product: any) => (
               <div key={product.id} className="bg-white rounded-2xl overflow-hidden border border-slate-100 flex flex-col">
-                <div className="aspect-[4/5] overflow-hidden bg-slate-50 relative">
+                <div className="aspect-[4/5] bg-white flex items-center justify-center relative">
                   {product.images?.[0]?.url
-                    ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover object-center" />
+                    ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-contain p-2" />
                     : <div className="w-full h-full flex items-center justify-center text-4xl">🌿</div>}
                   {product.featured && (
                     <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#1B5E20' }}>Destaque</span>
