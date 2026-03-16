@@ -30,11 +30,12 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-500 rounded-2xl mb-4">
-            <span className="text-white text-2xl font-bold" style={{fontFamily:'var(--font-display)'}}>M</span>
+            <span className="text-white text-2xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>M</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900" style={{fontFamily:'var(--font-display)'}}>Minha Loja</h1>
+          <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>Minha Loja</h1>
           <p className="text-slate-500 text-sm mt-1">Entre na sua conta</p>
         </div>
+
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -43,21 +44,34 @@ export default function LoginPage() {
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 transition"
                 placeholder="seu@email.com" required />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Senha</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-700">Senha</label>
+                <Link href="/auth/forgot" className="text-xs text-orange-500 hover:text-orange-600 transition-colors">
+                  Esqueci minha senha
+                </Link>
+              </div>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 transition"
                 placeholder="••••••••" required />
             </div>
-            {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{error}</div>}
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{error}</div>
+            )}
+
             <button type="submit" disabled={loading}
               className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold py-3 px-4 rounded-xl transition-colors">
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
+
           <p className="text-center text-sm text-slate-500 mt-6">
             Não tem conta?{' '}
-            <Link href="/auth/register" className="text-orange-500 hover:text-orange-600 font-medium">Solicitar cadastro</Link>
+            <Link href="/auth/register" className="text-orange-500 hover:text-orange-600 font-medium">
+              Solicitar cadastro
+            </Link>
           </p>
         </div>
       </div>
