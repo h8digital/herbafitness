@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDateTime, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/utils'
 import Link from 'next/link'
 import OrderStatusSelect from './OrderStatusSelect'
+import DeleteOrderRowButton from './DeleteOrderRowButton'
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
   const params = await searchParams
@@ -79,10 +80,13 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-500">{formatDateTime(order.created_at)}</td>
                   <td className="px-6 py-4">
-                    <Link href={`/admin/orders/${order.id}`}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors">
-                      Ver detalhes
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/admin/orders/${order.id}`}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors">
+                        Ver detalhes
+                      </Link>
+                      <DeleteOrderRowButton orderId={order.id} orderNumber={order.order_number} status={order.status} />
+                    </div>
                   </td>
                 </tr>
               )) : (

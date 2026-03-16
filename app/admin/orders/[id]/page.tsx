@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDateTime, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/utils'
 import { notFound } from 'next/navigation'
 import OrderStatusSelect from '../OrderStatusSelect'
+import DeleteOrderButton from './DeleteOrderButton'
 import AdminNotes from './AdminNotes'
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,7 +28,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </h1>
           <p className="text-slate-500 text-sm mt-1">{formatDateTime(order.created_at)}</p>
         </div>
-        <OrderStatusSelect order={order as any} />
+        <div className="flex items-center gap-3">
+          <OrderStatusSelect order={order as any} />
+          <DeleteOrderButton order={order as any} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

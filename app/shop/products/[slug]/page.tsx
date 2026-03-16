@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCurrency } from '@/lib/utils'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import BundleSelector from '@/components/shop/BundleSelector'
+import VariationSelector from '@/components/shop/VariationSelector'
 import FrequentlyBoughtTogether from '@/components/shop/FrequentlyBoughtTogether'
 import ShippingEstimate from '@/components/shop/ShippingEstimate'
 import ProductViewTracker from '@/components/shop/ProductViewTracker'
@@ -21,11 +21,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   if (!product) notFound()
 
-  // Buscar pacotes, sugestões manuais e produtos comprados juntos em paralelo
   const [
     { data: bundles },
     { data: manualSuggestions },
     { data: autoBoughtTogether },
+    { data: variationTypes },
   ] = await Promise.all([
     supabase.from('product_bundles').select('*').eq('product_id', product.id).eq('active', true).order('quantity'),
     supabase.from('product_suggestions')
@@ -33,11 +33,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       .eq('product_id', product.id).eq('active', true).order('sort_order'),
     supabase.from('products_bought_together')
       .select('related_product_id, times_bought_together')
+      .eq('product_id', product.id).limit(3),
+    supabase.from('product_variation_types')
+      .select('*, options:product_variation_options(*)')
       .eq('product_id', product.id)
-      .limit(3),
+      .order('sort_order'),
   ])
 
-  // Buscar produtos dos "comprados juntos" automáticos
+  // Buscar produtos "comprados juntos" automáticos
   let autoProducts: any[] = []
   if (autoBoughtTogether && autoBoughtTogether.length > 0) {
     const ids = autoBoughtTogether.map((r: any) => r.related_product_id)
@@ -45,31 +48,28 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     autoProducts = data || []
   }
 
-  // Combinar sugestões manuais + automáticas (manuais têm prioridade)
   const manualIds = new Set((manualSuggestions || []).map((s: any) => s.suggested_product_id))
   const suggestions = [
     ...(manualSuggestions || []).map((s: any) => ({
-      product: s.suggested_product,
-      bundle_price: s.bundle_price,
-      bundle_label: s.bundle_label,
-      source: 'manual' as const,
+      product: s.suggested_product, bundle_price: s.bundle_price,
+      bundle_label: s.bundle_label, source: 'manual' as const,
     })),
-    ...autoProducts
-      .filter(p => !manualIds.has(p.id))
-      .map(p => ({
-        product: p,
-        bundle_price: null,
-        bundle_label: null,
-        source: 'automatic' as const,
-      })),
+    ...autoProducts.filter(p => !manualIds.has(p.id)).map(p => ({
+      product: p, bundle_price: null, bundle_label: null, source: 'automatic' as const,
+    })),
   ].filter(s => s.product).slice(0, 4)
 
   const discount = product.compare_price
     ? Math.round(((product.compare_price - product.price) / product.compare_price) * 100) : 0
 
+  // Ordenar opções de variação
+  const sortedVariationTypes = (variationTypes || []).map((t: any) => ({
+    ...t,
+    options: (t.options || []).filter((o: any) => o.active).sort((a: any, b: any) => a.sort_order - b.sort_order)
+  }))
+
   return (
     <div className="pb-6">
-      {/* Tracker de visualização */}
       {user && <ProductViewTracker productId={product.id} customerId={user.id} />}
 
       {/* Voltar */}
@@ -90,14 +90,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </div>
 
       <div className="px-4 space-y-4">
-        {/* Categoria */}
         {product.categories && (
           <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#4CAF50' }}>
             {(product.categories as any).name}
           </p>
         )}
 
-        {/* Nome */}
         <h1 className="font-black text-xl text-slate-900 leading-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
           {product.name}
         </h1>
@@ -123,13 +121,17 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </div>
 
-        {/* Pacotes de quantidade */}
-        <BundleSelector product={product as any} bundles={bundles || []} />
+        {/* Variações + Pacotes + Botão */}
+        <VariationSelector
+          product={product as any}
+          variationTypes={sortedVariationTypes}
+          bundles={bundles || []}
+        />
 
-        {/* Frete estimado */}
+        {/* Frete */}
         <ShippingEstimate product={product as any} />
 
-        {/* Produtos comprados juntos */}
+        {/* Comprados juntos */}
         {suggestions.length > 0 && (
           <FrequentlyBoughtTogether currentProduct={product as any} suggestions={suggestions} />
         )}
@@ -142,13 +144,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         )}
 
-        {/* Tags */}
         {product.tags && product.tags.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {product.tags.map((tag: string) => (
-              <span key={tag} className="bg-green-50 text-green-700 text-xs px-3 py-1 rounded-full font-medium border border-green-100">
-                {tag}
-              </span>
+              <span key={tag} className="bg-green-50 text-green-700 text-xs px-3 py-1 rounded-full font-medium border border-green-100">{tag}</span>
             ))}
           </div>
         )}
