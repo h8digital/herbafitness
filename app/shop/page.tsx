@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency } from '@/lib/utils'
-import AddToCartButton from '@/components/shop/AddToCartButton'
-import WishlistButton from '@/components/shop/WishlistButton'
+import ProductCard from '@/components/shop/ProductCard'
 import Link from 'next/link'
 import ZipModal from '@/components/shop/ZipModal'
 
@@ -67,11 +66,9 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
       {/* Últimos vistos */}
       {!isFiltered && recentProducts.length > 0 && (
         <div className="pt-5">
-          <div className="flex items-center justify-between px-4 mb-3">
-            <p className="font-black text-sm text-slate-900" style={{ fontFamily: 'Arial Black, sans-serif' }}>
-              👁️ Vistos Recentemente
-            </p>
-          </div>
+          <p className="font-black text-sm text-slate-900 px-4 mb-3" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+            👁️ Vistos Recentemente
+          </p>
           <div className="flex gap-3 px-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {recentProducts.map((product: any) => (
               <Link key={product.id} href={`/shop/products/${product.slug}`}
@@ -132,63 +129,15 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
         </div>
       )}
 
-      {/* Grid de produtos */}
+      {/* Grid de produtos — usa ProductCard (Client Component) */}
       {products && products.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 px-4">
           {products.map((product: any) => (
-            <div key={product.id} className="bg-white rounded-2xl overflow-hidden border border-slate-100 flex flex-col">
-              {/* Imagem + badges + favorito */}
-              <Link href={`/shop/products/${product.slug}`} className="block relative">
-                <div className="aspect-[4/5] bg-white flex items-center justify-center">
-                  {product.images?.[0]?.url
-                    ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-contain p-2" />
-                    : <div className="w-full h-full flex items-center justify-center text-4xl">🌿</div>}
-                </div>
-                {product.featured && (
-                  <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: '#1B5E20' }}>Destaque</span>
-                )}
-                {product.compare_price && (
-                  <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500">
-                    -{Math.round(((product.compare_price - product.price) / product.compare_price) * 100)}%
-                  </span>
-                )}
-                {/* Botão de favorito — canto superior direito */}
-                <div className="absolute top-2 right-2" onClick={e => e.preventDefault()}>
-                  <WishlistButton
-                    productId={product.id}
-                    initialFavorited={favoritedIds.has(product.id)}
-                    size="sm"
-                  />
-                </div>
-              </Link>
-
-              {/* Info + botão */}
-              <div className="p-3 flex flex-col flex-1 gap-2">
-                <Link href={`/shop/products/${product.slug}`}>
-                  <p className="text-xs text-slate-900 font-medium leading-tight line-clamp-2 min-h-[2.5rem]">
-                    {product.name}
-                  </p>
-                </Link>
-
-                {product.compare_price && (
-                  <p className="text-[11px] text-slate-400 line-through -mb-1">
-                    {formatCurrency(product.compare_price)}
-                  </p>
-                )}
-
-                <p className="font-black text-base" style={{ color: '#1B5E20', fontFamily: 'Arial Black, sans-serif' }}>
-                  {formatCurrency(product.price)}
-                </p>
-
-                {product.stock === 0 ? (
-                  <p className="text-[11px] text-red-400 font-medium">Sem estoque</p>
-                ) : (
-                  /* Botão de carrinho maior e mais visível */
-                  <AddToCartButton product={product} size="md" />
-                )}
-              </div>
-            </div>
+            <ProductCard
+              key={product.id}
+              product={product}
+              initialFavorited={favoritedIds.has(product.id)}
+            />
           ))}
         </div>
       ) : (
