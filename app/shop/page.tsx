@@ -12,7 +12,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   let query = supabase.from('products').select('*, categories(name, id)').eq('active', true)
     .order('featured', { ascending: false }).order('created_at', { ascending: false })
   if (params.category) query = query.eq('category_id', params.category)
-  if (params.q) query = query.ilike('name', `%${params.q}%`)
+  if (params.q) query = query.or(`name.ilike.%${params.q}%,sku.ilike.%${params.q}%,short_description.ilike.%${params.q}%`)
 
   const [
     { data: products },

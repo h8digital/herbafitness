@@ -23,14 +23,14 @@ export default function MobileHeader({ profile, onCartOpen }: MobileHeaderProps)
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    if (search.trim()) router.push(`/shop?q=${encodeURIComponent(search.trim())}`)
+    const term = search.trim()
+    if (term) router.push(`/shop?q=${encodeURIComponent(term)}`)
   }
 
   return (
     <header className="sticky top-0 z-40 w-full" style={{ background: '#1B5E20' }}>
-      {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 pt-3 pb-2">
-        {/* Logo compacta */}
+      <div className="flex items-center gap-3 px-4 pt-3 pb-2 max-w-lg mx-auto">
+        {/* Logo */}
         <Link href="/shop" className="flex items-center gap-1.5 flex-shrink-0">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/20">
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none">
@@ -44,13 +44,13 @@ export default function MobileHeader({ profile, onCartOpen }: MobileHeaderProps)
           </span>
         </Link>
 
-        {/* Barra de busca */}
+        {/* Barra de busca — busca por nome, descrição e SKU */}
         <form onSubmit={handleSearch} className="flex-1">
           <div className="flex items-center bg-white rounded-xl overflow-hidden">
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar produtos..."
+              placeholder="Nome, descrição ou SKU..."
               className="flex-1 px-3 py-2 text-sm text-slate-800 outline-none bg-transparent"
             />
             <button type="submit" className="px-3 py-2" style={{ color: '#1B5E20' }}>
@@ -61,17 +61,17 @@ export default function MobileHeader({ profile, onCartOpen }: MobileHeaderProps)
           </div>
         </form>
 
-        {/* Avatar / sair */}
+        {/* Avatar */}
         <button onClick={handleLogout}
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-white/20 flex-shrink-0">
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-white/20 flex-shrink-0"
+          title="Sair">
           <span className="text-white font-bold text-xs">
             {profile.full_name?.charAt(0).toUpperCase() || 'U'}
           </span>
         </button>
       </div>
 
-      {/* Saudação */}
-      <div className="px-4 pb-3">
+      <div className="px-4 pb-3 max-w-lg mx-auto">
         <p className="text-white/80 text-xs">
           Olá, <span className="text-white font-semibold">{profile.full_name?.split(' ')[0] || 'cliente'}</span> 👋
         </p>

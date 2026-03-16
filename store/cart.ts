@@ -9,7 +9,7 @@ interface CartStore {
   couponCode: string | null
   couponDiscount: number
   selectedShipping: ShippingOption | null
-  
+
   addItem: (product: Product, quantity?: number) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
@@ -17,10 +17,19 @@ interface CartStore {
   applyCoupon: (code: string, discount: number) => void
   removeCoupon: () => void
   setShipping: (option: ShippingOption | null) => void
-  
-  get subtotal(): number
-  get total(): number
-  get itemCount(): number
+}
+
+// Funções utilitárias — chamadas externamente com o estado
+export function calcSubtotal(items: CartItem[]): number {
+  return items.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
+}
+
+export function calcTotal(items: CartItem[], couponDiscount: number, shippingPrice: number): number {
+  return calcSubtotal(items) - couponDiscount + shippingPrice
+}
+
+export function calcItemCount(items: CartItem[]): number {
+  return items.reduce((sum, i) => sum + i.quantity, 0)
 }
 
 export const useCartStore = create<CartStore>()(
@@ -33,12 +42,15 @@ export const useCartStore = create<CartStore>()(
 
       addItem: (product, quantity = 1) => {
         set(state => {
-          const existing = state.items.find(i => i.product.id === product.id)
+          // Produtos de pacote têm nome diferente (ex: "Shake (Pacote 2x)")
+          // então usamos nome+id como chave para não conflitar com unitário
+          const key = product.name + product.id
+          const existing = state.items.find(i => (i.product.name + i.product.id) === key)
           if (existing) {
             return {
               items: state.items.map(i =>
-                i.product.id === product.id
-                  ? { ...i, quantity: Math.min(i.quantity + quantity, product.stock) }
+                (i.product.name + i.product.id) === key
+                  ? { ...i, quantity: i.quantity + quantity }
                   : i
               ),
             }
@@ -64,26 +76,9 @@ export const useCartStore = create<CartStore>()(
       },
 
       clearCart: () => set({ items: [], couponCode: null, couponDiscount: 0, selectedShipping: null }),
-
       applyCoupon: (code, discount) => set({ couponCode: code, couponDiscount: discount }),
-      
       removeCoupon: () => set({ couponCode: null, couponDiscount: 0 }),
-      
       setShipping: (option) => set({ selectedShipping: option }),
-
-      get subtotal() {
-        return get().items.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
-      },
-
-      get total() {
-        const state = get()
-        const shipping = state.selectedShipping?.price || 0
-        return state.subtotal - state.couponDiscount + shipping
-      },
-
-      get itemCount() {
-        return get().items.reduce((sum, i) => sum + i.quantity, 0)
-      },
     }),
     { name: 'cart-storage' }
   )

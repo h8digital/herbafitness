@@ -3,14 +3,20 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useCartStore } from '@/store/cart'
+import { useCartStore, calcSubtotal } from '@/store/cart'
 import { formatCurrency } from '@/lib/utils'
 import { ShippingOption } from '@/types'
 
 export default function CheckoutPage() {
   const router = useRouter()
   const supabase = createClient()
-  const { items, subtotal, couponCode, couponDiscount, selectedShipping, setShipping, clearCart } = useCartStore()
+  const items = useCartStore(s => s.items)
+  const couponCode = useCartStore(s => s.couponCode)
+  const couponDiscount = useCartStore(s => s.couponDiscount)
+  const selectedShipping = useCartStore(s => s.selectedShipping)
+  const setShipping = useCartStore(s => s.setShipping)
+  const clearCart = useCartStore(s => s.clearCart)
+  const subtotal = calcSubtotal(items)
 
   const [profile, setProfile] = useState<any>(null)
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([])

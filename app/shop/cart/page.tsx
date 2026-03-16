@@ -1,18 +1,28 @@
 'use client'
 
-import { useCartStore } from '@/store/cart'
+import { useCartStore, calcSubtotal, calcTotal } from '@/store/cart'
 import { formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, subtotal, couponCode, couponDiscount, selectedShipping, applyCoupon, removeCoupon } = useCartStore()
+  const items = useCartStore(s => s.items)
+  const couponCode = useCartStore(s => s.couponCode)
+  const couponDiscount = useCartStore(s => s.couponDiscount)
+  const selectedShipping = useCartStore(s => s.selectedShipping)
+  const removeItem = useCartStore(s => s.removeItem)
+  const updateQuantity = useCartStore(s => s.updateQuantity)
+  const applyCoupon = useCartStore(s => s.applyCoupon)
+  const removeCoupon = useCartStore(s => s.removeCoupon)
+
+  const subtotal = calcSubtotal(items)
+  const total = calcTotal(items, couponDiscount, selectedShipping?.price || 0)
+
   const [couponInput, setCouponInput] = useState('')
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError, setCouponError] = useState('')
   const supabase = createClient()
-  const total = subtotal - couponDiscount + (selectedShipping?.price || 0)
 
   async function applyDiscount() {
     if (!couponInput.trim()) return
@@ -32,10 +42,8 @@ export default function CartPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         <span className="text-6xl mb-4">🛒</span>
         <h2 className="font-black text-xl text-slate-900 mb-2" style={{ fontFamily: 'Arial Black, sans-serif' }}>Carrinho vazio</h2>
-        <p className="text-slate-500 text-sm mb-6 text-center">Adicione produtos para continuar comprando</p>
-        <Link href="/shop" className="bg-green-700 text-white font-bold px-8 py-3 rounded-xl text-sm">
-          Ver Produtos
-        </Link>
+        <p className="text-slate-500 text-sm mb-6 text-center">Adicione produtos para continuar</p>
+        <Link href="/shop" className="bg-green-700 text-white font-bold px-8 py-3 rounded-xl text-sm">Ver Produtos</Link>
       </div>
     )
   }
@@ -49,22 +57,21 @@ export default function CartPage() {
       {/* Itens */}
       <div className="space-y-3">
         {items.map(item => (
-          <div key={item.product.id} className="bg-white rounded-2xl p-3 flex gap-3">
+          <div key={item.product.name + item.product.id} className="bg-white rounded-2xl p-3 flex gap-3">
             <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-50">
               {item.product.images?.[0]?.url
                 ? <img src={item.product.images[0].url} alt={item.product.name} className="w-full h-full object-cover" />
-                : <div className="w-full h-full flex items-center justify-center text-2xl">🌿</div>
-              }
+                : <div className="w-full h-full flex items-center justify-center text-2xl">🌿</div>}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-900 line-clamp-2">{item.product.name}</p>
-              <p className="font-black text-sm mt-1" style={{ color: '#1B5E20' }}>{formatCurrency(item.product.price)}</p>
+              <p className="font-black text-sm mt-1" style={{ color: '#1B5E20' }}>{formatCurrency(item.product.price)} cada</p>
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center rounded-xl overflow-hidden border border-slate-200">
                   <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                     className="w-8 h-7 flex items-center justify-center text-slate-600 font-bold text-lg">−</button>
                   <span className="w-7 h-7 flex items-center justify-center text-sm font-bold text-slate-900">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.product.id, Math.min(item.quantity + 1, item.product.stock))}
+                  <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                     className="w-8 h-7 flex items-center justify-center text-slate-600 font-bold text-lg">+</button>
                 </div>
                 <button onClick={() => removeItem(item.product.id)} className="text-red-400 text-xs font-medium">Remover</button>
@@ -107,12 +114,30 @@ export default function CartPage() {
 
       {/* Resumo */}
       <div className="bg-white rounded-2xl p-4 space-y-2">
-        <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-        {couponDiscount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Desconto</span><span>-{formatCurrency(couponDiscount)}</span></div>}
-        <div className="flex justify-between text-sm text-slate-600"><span>Frete</span><span className="text-slate-400">calculado no checkout</span></div>
-        <div className="border-t border-slate-100 pt-2 flex justify-between font-black text-slate-900">
-          <span>Total</span>
-          <span style={{ color: '#1B5E20' }}>{formatCurrency(total)}</span>
+        <h3 className="font-bold text-sm text-slate-900 mb-3">Resumo do Pedido</h3>
+        {items.map(item => (
+          <div key={item.product.name + item.product.id} className="flex justify-between text-xs text-slate-500">
+            <span className="truncate mr-2">{item.quantity}x {item.product.name}</span>
+            <span className="flex-shrink-0 font-medium">{formatCurrency(item.product.price * item.quantity)}</span>
+          </div>
+        ))}
+        <div className="border-t border-slate-100 pt-2 mt-2 space-y-1.5">
+          <div className="flex justify-between text-sm text-slate-600">
+            <span>Subtotal</span><span className="font-semibold">{formatCurrency(subtotal)}</span>
+          </div>
+          {couponDiscount > 0 && (
+            <div className="flex justify-between text-sm text-green-600">
+              <span>Desconto ({couponCode})</span><span>-{formatCurrency(couponDiscount)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm text-slate-600">
+            <span>Frete</span>
+            <span>{selectedShipping ? formatCurrency(selectedShipping.price) : 'Calculado no checkout'}</span>
+          </div>
+          <div className="flex justify-between font-black text-slate-900 text-base pt-1.5 border-t border-slate-200">
+            <span>Total</span>
+            <span style={{ color: '#1B5E20' }}>{formatCurrency(total)}</span>
+          </div>
         </div>
       </div>
 

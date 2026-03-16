@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types'
-import { useCartStore } from '@/store/cart'
+import { useCartStore, calcItemCount } from '@/store/cart'
 import CartDrawer from './CartDrawer'
 
 export default function ShopHeader({ profile }: { profile: Profile }) {
   const router = useRouter()
   const supabase = createClient()
-  const itemCount = useCartStore(s => s.itemCount)
+  const items = useCartStore(s => s.items)
+  const itemCount = calcItemCount(items)
   const [cartOpen, setCartOpen] = useState(false)
 
   async function handleLogout() {
