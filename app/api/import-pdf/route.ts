@@ -5,11 +5,12 @@ export const maxDuration = 30
 interface ParsedProduct {
   sku: string
   name: string
-  price_consumer: number  // Preço de venda (Sugerido ao Consumidor)
-  price_cost: number      // Seu custo (50% de desconto)
-  price_25: number
-  price_35: number
-  price_42: number
+  price_consumer: number   // C2: Preço Sugerido ao Consumidor
+  price_25: number         // C3: 25% desconto
+  price_35: number         // C4: 35% desconto
+  price_42: number         // C5: 42% desconto
+  price_50: number         // C6: 50% desconto
+  price_supervisor: number // C7: Supervisor
   points: number
   category: string
 }
@@ -17,13 +18,12 @@ interface ParsedProduct {
 function parsePriceList(text: string): ParsedProduct[] {
   const results: ParsedProduct[] = []
 
-  // Formato da tabela:
-  // SKU Nome  custo_pv  pontos  25%  35%  42%  50%  supervisor  custo_pv_final
+  // Ordem real do PDF: SKU Nome custo_pv(C1) consumidor(C2) 25%(C3) 35%(C4) 42%(C5) 50%(C6) supervisor(C7) custo_pv_final(C8)
   const productRegex = /([0-9A-Z]{4}[A-Z0-9]?)\s+(.+?)\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})/g
 
   let match
   while ((match = productRegex.exec(text)) !== null) {
-    const [, sku, name, , points, p25, p35, p42, p50, supervisor] = match
+    const [, sku, name, , consumer, p25, p35, p42, p50, supervisor] = match
 
     const cleanName = name.trim().replace(/\s+/g, ' ')
     if (cleanName.includes('VISOR') && cleanName.includes('PV')) continue
@@ -31,28 +31,22 @@ function parsePriceList(text: string): ParsedProduct[] {
 
     const parseNum = (s: string) => parseFloat(s.replace(',', '.'))
 
-    // Determinar categoria pela posição
     const posInText = match.index
     const textBefore = text.substring(0, posInText)
     const category = (textBefore.includes('Nutrição Externa') || textBefore.includes('N u t r i ç ã o   E x t e r n a'))
       ? 'Nutrição Externa'
       : 'Nutrição Interna'
 
-    // O preço de venda é o supervisor (que no PDF aparece como coluna "Preço Sugerido ao Consumidor")
-    // A ordem das colunas no PDF: custo_pv | pontos | 25% | 35% | 42% | 50% | supervisor | custo_pv
-    // O "supervisor" aqui é na verdade o Preço Sugerido ao Consumidor
-    const consumerPrice = parseNum(supervisor)
-    const costPrice50 = parseNum(p50)
-
     results.push({
       sku: sku.trim(),
       name: cleanName,
-      price_consumer: consumerPrice,
-      price_cost: costPrice50,
-      price_25: parseNum(p25),
-      price_35: parseNum(p35),
-      price_42: parseNum(p42),
-      points: parseNum(points),
+      price_consumer: parseNum(consumer),  // R$ 105,00 para 0009
+      price_25: parseNum(p25),             // R$ 86,91
+      price_35: parseNum(p35),             // R$ 81,12
+      price_42: parseNum(p42),             // R$ 77,07
+      price_50: parseNum(p50),             // R$ 72,43
+      price_supervisor: parseNum(supervisor),
+      points: parseNum(consumer),
       category,
     })
   }

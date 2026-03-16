@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { slugify } from '@/lib/utils'
@@ -9,11 +9,10 @@ interface ParsedProduct {
   sku: string
   name: string
   price_consumer: number
-  price_cost: number
   price_25: number
   price_35: number
   price_42: number
-  points: number
+  price_50: number
   category: string
   status?: 'new' | 'update'
   existing_id?: string
@@ -25,8 +24,34 @@ export default function ImportPDFPage() {
   const [importing, setImporting] = useState(false)
   const [products, setProducts] = useState<ParsedProduct[]>([])
   const [result, setResult] = useState<{ created: number; updated: number; errors: number } | null>(null)
+  const [discount, setDiscount] = useState('50')
   const router = useRouter()
   const supabase = createClient()
+
+  // Carregar desconto configurado
+  useEffect(() => {
+    supabase.from('settings').select('herbalife_discount').eq('id', 'default').single().then(({ data }) => {
+      if (data?.herbalife_discount) setDiscount(data.herbalife_discount)
+    })
+  }, [])
+
+  function getCostPrice(p: ParsedProduct): number {
+    switch (discount) {
+      case '25': return p.price_25
+      case '35': return p.price_35
+      case '42': return p.price_42
+      default: return p.price_50
+    }
+  }
+
+  function getCostLabel(): string {
+    switch (discount) {
+      case '25': return '25%'
+      case '35': return '35%'
+      case '42': return '42%'
+      default: return '50%'
+    }
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -44,8 +69,6 @@ export default function ImportPDFPage() {
       if (!res.ok) throw new Error(data.error || 'Erro ao parsear PDF')
 
       const parsed: ParsedProduct[] = data.products
-
-      // Verificar quais já existem no banco
       const skus = parsed.map(p => p.sku)
       const { data: existing } = await supabase.from('products').select('id, sku').in('sku', skus)
       const existingMap = new Map(existing?.map(p => [p.sku, p.id]) || [])
@@ -65,7 +88,6 @@ export default function ImportPDFPage() {
     setImporting(true)
     let created = 0, updated = 0, errors = 0
 
-    // Garantir categorias
     const categoryNames = [...new Set(products.map(p => p.category))]
     const categoryMap = new Map<string, string>()
     for (const catName of categoryNames) {
@@ -79,13 +101,13 @@ export default function ImportPDFPage() {
       }
     }
 
-    // Importar produtos
     for (const product of products) {
       try {
+        const costPrice = getCostPrice(product)
         const productData = {
           name: product.name,
-          price: product.price_consumer,      // Preço de venda = Sugerido ao Consumidor
-          cost_price: product.price_cost,      // Custo = 50% desconto
+          price: product.price_consumer,   // Preço de venda = Sugerido ao Consumidor
+          cost_price: costPrice,            // Custo = desconto configurado
           category_id: categoryMap.get(product.category) || null,
         }
 
@@ -128,20 +150,22 @@ export default function ImportPDFPage() {
         <p className="text-slate-500 text-sm mt-1">Upload do PDF da Herbalife para cadastrar ou atualizar produtos automaticamente</p>
       </div>
 
-      {/* Info dos preços */}
-      <div className="rounded-2xl p-5 border grid grid-cols-2 gap-4" style={{ background: '#f1f8f1', borderColor: '#c8e6c9' }}>
+      {/* Info preços */}
+      <div className="rounded-2xl p-5 border grid grid-cols-1 md:grid-cols-2 gap-4" style={{ background: '#f1f8f1', borderColor: '#c8e6c9' }}>
         <div className="flex items-start gap-3">
           <span className="text-2xl">🏷️</span>
           <div>
             <p className="font-semibold text-sm" style={{ color: '#1B5E20' }}>Preço de Venda no Site</p>
-            <p className="text-xs text-slate-500 mt-0.5">Preço Sugerido ao Consumidor — coluna do PDF usada automaticamente</p>
+            <p className="text-xs text-slate-500 mt-0.5">Preço Sugerido ao Consumidor (coluna do PDF)</p>
           </div>
         </div>
         <div className="flex items-start gap-3">
           <span className="text-2xl">💰</span>
           <div>
-            <p className="font-semibold text-sm" style={{ color: '#1B5E20' }}>Seu Preço de Custo</p>
-            <p className="text-xs text-slate-500 mt-0.5">Coluna 50% — registrado internamente para controle de margem</p>
+            <p className="font-semibold text-sm" style={{ color: '#1B5E20' }}>Seu Custo ({getCostLabel()} desconto)</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Configurado em <a href="/admin/settings" className="underline">Configurações</a> · Usado para calcular margem
+            </p>
           </div>
         </div>
       </div>
@@ -207,32 +231,39 @@ export default function ImportPDFPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Produto</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Categoria</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Preço de Venda</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Seu Custo (50%)</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Seu Custo ({getCostLabel()})</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Margem</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {products.map((p, i) => (
-                  <tr key={i} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${p.status === 'new' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {p.status === 'new' ? '+ Novo' : '↑ Atualizar'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-600">{p.sku}</td>
-                    <td className="px-4 py-3 text-sm text-slate-900 max-w-xs">
-                      <p className="truncate">{p.name}</p>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{p.category}</td>
-                    <td className="px-4 py-3">
-                      <span className="font-bold text-sm" style={{ color: '#1B5E20' }}>
+                {products.map((p, i) => {
+                  const cost = getCostPrice(p)
+                  const margin = p.price_consumer - cost
+                  const marginPct = ((margin / p.price_consumer) * 100).toFixed(0)
+                  return (
+                    <tr key={i} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${p.status === 'new' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {p.status === 'new' ? '+ Novo' : '↑ Atualizar'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-600">{p.sku}</td>
+                      <td className="px-4 py-3 text-sm text-slate-900 max-w-xs"><p className="truncate">{p.name}</p></td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{p.category}</td>
+                      <td className="px-4 py-3 font-bold text-sm" style={{ color: '#1B5E20' }}>
                         R$ {p.price_consumer.toFixed(2).replace('.', ',')}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-400">
-                      R$ {p.price_cost.toFixed(2).replace('.', ',')}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-500">
+                        R$ {cost.toFixed(2).replace('.', ',')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-100 text-green-700">
+                          {marginPct}%
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
