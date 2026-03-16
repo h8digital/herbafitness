@@ -10,11 +10,12 @@ import ImageCropUpload from '@/components/ui/ImageCropUpload'
 interface ProductFormProps {
   product?: Product
   categories: Category[]
+  imageRatio?: '3/4' | '4/5' | '1/1' | '4/3' | '16/9'
 }
 
 type Tab = 'basico' | 'preco' | 'estoque' | 'imagens' | 'frete'
 
-export default function ProductForm({ product, categories }: ProductFormProps) {
+export default function ProductForm({ product, categories, imageRatio = '4/5' }: ProductFormProps) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -301,7 +302,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
                     label="Imagem Principal"
                     value={form.image_url}
                     folder="products"
-                    aspectRatio="3/4"
+                    aspectRatio={imageRatio}
                     onChange={(url, path) => {
                       set('image_url', url)
                     }}
@@ -321,7 +322,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="text-green-500 mt-0.5">✓</span>
-                      <span>A imagem é salva em <strong>600×800px</strong> (proporção 3×4)</span>
+                      <span>A imagem é salva em proporção <strong>{imageRatio}</strong> ({imageRatio === '4/5' ? '800×1000px' : imageRatio === '3/4' ? '600×800px' : imageRatio === '1/1' ? '800×800px' : '800×600px'})</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="text-green-500 mt-0.5">✓</span>

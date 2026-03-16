@@ -25,6 +25,7 @@ export default async function EditProductPage({
     { data: suggestions },
     { data: allProducts },
     { data: variationTypes },
+    { data: settings },
   ] = await Promise.all([
     supabase.from('products').select('*').eq('id', id).single(),
     supabase.from('categories').select('*').eq('active', true),
@@ -32,9 +33,12 @@ export default async function EditProductPage({
     supabase.from('product_suggestions').select('*, suggested_product:products!suggested_product_id(*)').eq('product_id', id),
     supabase.from('products').select('*').eq('active', true).neq('id', id),
     supabase.from('product_variation_types').select('*, options:product_variation_options(*)').eq('product_id', id).order('sort_order'),
+    supabase.from('settings').select('product_image_ratio').eq('id', 'default').single(),
   ])
 
   if (!product) notFound()
+
+  const imageRatio = (settings?.product_image_ratio || '4/5') as '3/4' | '4/5' | '1/1' | '4/3'
 
   const sections = [
     { key: 'dados',     label: 'Dados do Produto', icon: '📝', desc: 'Nome, preço, estoque, imagem' },
@@ -90,7 +94,7 @@ export default async function EditProductPage({
       {/* Conteúdo da seção selecionada */}
       {section === 'dados' && (
         <div className="max-w-2xl">
-          <ProductForm product={product} categories={categories || []} />
+          <ProductForm product={product} categories={categories || []} imageRatio={imageRatio} />
         </div>
       )}
 

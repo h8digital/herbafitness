@@ -30,7 +30,7 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-display); }
 
 /* Proporção padrão 3x4 para imagens de produtos */
 .product-image {
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 5;
   overflow: hidden;
   background: #f8faf8;
 }

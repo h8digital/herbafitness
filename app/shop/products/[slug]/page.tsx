@@ -84,7 +84,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </div>
 
       {/* Imagem */}
-      <div className="mx-4 rounded-2xl overflow-hidden bg-white aspect-[3/4] mb-4 relative">
+      <div className="mx-4 rounded-2xl overflow-hidden bg-white aspect-[4/5] mb-4 relative">
         {product.images?.[0]?.url
           ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover object-center" />
           : <div className="w-full h-full flex items-center justify-center text-8xl">🌿</div>}

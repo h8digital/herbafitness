@@ -8,7 +8,7 @@ interface ImageCropUploadProps {
   onChange: (url: string, path: string) => void
   folder?: string
   label?: string
-  aspectRatio?: '3/4' | '4/3' | '1/1' | '16/9'
+  aspectRatio?: '3/4' | '4/5' | '1/1' | '4/3' | '16/9'
 }
 
 interface CropArea {
@@ -20,8 +20,9 @@ interface CropArea {
 
 const ASPECT_RATIOS = {
   '3/4': 3 / 4,
-  '4/3': 4 / 3,
+  '4/5': 4 / 5,
   '1/1': 1,
+  '4/3': 4 / 3,
   '16/9': 16 / 9,
 }
 
@@ -30,7 +31,7 @@ export default function ImageCropUpload({
   onChange,
   folder = 'products',
   label = 'Imagem do Produto',
-  aspectRatio = '3/4',
+  aspectRatio = '4/5',
 }: ImageCropUploadProps) {
   const [originalImage, setOriginalImage] = useState<string | null>(null)
   const [crop, setCrop] = useState<CropArea>({ x: 0, y: 0, width: 0, height: 0 })
@@ -161,8 +162,8 @@ export default function ImageCropUpload({
       const scaleX = imgNaturalSize.w / imgDisplaySize.w
       const scaleY = imgNaturalSize.h / imgDisplaySize.h
 
-      // Resolução de saída: 600x800 (3x4) — ótimo para produto
-      const outW = 600
+      // Resolução de saída: 800x1000 (4:5) — ótimo para produto
+      const outW = 800
       const outH = Math.round(outW / ratio)
       canvas.width = outW
       canvas.height = outH
@@ -201,6 +202,8 @@ export default function ImageCropUpload({
   // Preview da proporção
   const previewStyle = aspectRatio === '3/4'
     ? 'aspect-[3/4]'
+    : aspectRatio === '4/5'
+    ? 'aspect-[4/5]'
     : aspectRatio === '4/3'
     ? 'aspect-[4/3]'
     : aspectRatio === '1/1'

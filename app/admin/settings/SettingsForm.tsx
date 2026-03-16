@@ -29,6 +29,7 @@ interface Settings {
   meta_test_event_code: string | null
   google_analytics_id: string | null
   google_search_console: string | null
+  product_image_ratio: string | null
 }
 
 type Tab = 'loja' | 'herbalife' | 'frete' | 'seo' | 'meta' | 'google'
@@ -64,6 +65,7 @@ export default function SettingsForm({ settings }: { settings: Settings | null }
     meta_test_event_code: settings?.meta_test_event_code || '',
     google_analytics_id: settings?.google_analytics_id || '',
     google_search_console: settings?.google_search_console || '',
+    product_image_ratio: (settings as any)?.product_image_ratio || '4/5',
   })
 
   function set(field: string, value: string | boolean) {
@@ -97,6 +99,7 @@ export default function SettingsForm({ settings }: { settings: Settings | null }
       meta_test_event_code: form.meta_test_event_code || null,
       google_analytics_id: form.google_analytics_id || null,
       google_search_console: form.google_search_console || null,
+      product_image_ratio: form.product_image_ratio,
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
@@ -164,6 +167,51 @@ export default function SettingsForm({ settings }: { settings: Settings | null }
               className="relative w-12 h-6 rounded-full transition-colors cursor-pointer"
               style={{ background: form.mercadopago_enabled ? '#4CAF50' : '#e2e8f0' }}>
               <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.mercadopago_enabled ? 'translate-x-7' : 'translate-x-1'}`} />
+            </div>
+          </div>
+
+          {/* Proporção das imagens dos produtos */}
+          <div className="pt-2 border-t border-slate-100">
+            <p className="font-medium text-slate-900 text-sm mb-1">Proporção das Imagens dos Produtos</p>
+            <p className="text-xs text-slate-400 mb-4">Define o recorte no cadastro e a exibição em todo o site</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { value: '1/1',  label: '1:1',  desc: 'Quadrado',      w: 60,  h: 60  },
+                { value: '4/5',  label: '4:5',  desc: 'Retrato curto', w: 48,  h: 60  },
+                { value: '3/4',  label: '3:4',  desc: 'Retrato longo', w: 45,  h: 60  },
+                { value: '4/3',  label: '4:3',  desc: 'Paisagem',      w: 60,  h: 45  },
+              ].map(opt => {
+                const isSelected = form.product_image_ratio === opt.value
+                return (
+                  <label key={opt.value}
+                    onClick={() => set('product_image_ratio', opt.value)}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 cursor-pointer transition-all ${isSelected ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-green-300'}`}>
+                    {/* Preview visual da proporção */}
+                    <div className="flex items-center justify-center" style={{ width: 60, height: 60 }}>
+                      <div className="rounded-lg overflow-hidden"
+                        style={{
+                          width: opt.w,
+                          height: opt.h,
+                          background: isSelected
+                            ? 'linear-gradient(135deg, #1B5E20, #4CAF50)'
+                            : '#e2e8f0',
+                        }}>
+                        {isSelected && (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className={`font-bold text-sm ${isSelected ? 'text-green-800' : 'text-slate-700'}`}>{opt.label}</p>
+                      <p className="text-[11px] text-slate-400">{opt.desc}</p>
+                    </div>
+                  </label>
+                )
+              })}
             </div>
           </div>
         </div>
