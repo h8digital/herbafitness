@@ -244,7 +244,7 @@ export default function VariationSelector({
               </div>
               <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-slate-50">
                 {product.images?.[0]?.url
-                  ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover" />
+                  ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover object-center" />
                   : <div className="w-full h-full flex items-center justify-center text-base">🌿</div>}
               </div>
               <div className="flex-1 min-w-0">
@@ -279,7 +279,7 @@ export default function VariationSelector({
                   </div>
                   <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-slate-50">
                     {sp.images?.[0]?.url
-                      ? <img src={sp.images[0].url} alt={sp.name} className="w-full h-full object-cover" />
+                      ? <img src={sp.images[0].url} alt={sp.name} className="w-full h-full object-cover object-center" />
                       : <div className="w-full h-full flex items-center justify-center text-base">🌿</div>}
                   </div>
                   <div className="flex-1 min-w-0">

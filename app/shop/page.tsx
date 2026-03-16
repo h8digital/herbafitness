@@ -75,9 +75,9 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
             {recentProducts.map((product: any) => (
               <Link key={product.id} href={`/shop/products/${product.slug}`}
                 className="flex-shrink-0 w-28 bg-white rounded-2xl border border-slate-100 overflow-hidden active:scale-95 transition-transform">
-                <div className="aspect-square bg-slate-50">
+                <div className="aspect-[3/4] bg-slate-50">
                   {product.images?.[0]?.url
-                    ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover" />
+                    ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover object-center" />
                     : <div className="w-full h-full flex items-center justify-center text-2xl">🌿</div>}
                 </div>
                 <div className="p-2">
@@ -138,9 +138,9 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
           {products.map((product: any) => (
             <div key={product.id} className="bg-white rounded-2xl overflow-hidden border border-slate-100 flex flex-col">
               <Link href={`/shop/products/${product.slug}`} className="block relative">
-                <div className="aspect-square overflow-hidden bg-slate-50">
+                <div className="aspect-[3/4] overflow-hidden bg-slate-50">
                   {product.images?.[0]?.url
-                    ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover" />
+                    ? <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover object-center" />
                     : <div className="w-full h-full flex items-center justify-center text-4xl">🌿</div>}
                 </div>
                 {product.featured && (
