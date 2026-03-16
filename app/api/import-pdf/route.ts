@@ -5,51 +5,54 @@ export const maxDuration = 30
 interface ParsedProduct {
   sku: string
   name: string
-  cost_pv: number
-  points: number
-  price_consumer: number
+  price_consumer: number  // Preço de venda (Sugerido ao Consumidor)
+  price_cost: number      // Seu custo (50% de desconto)
   price_25: number
   price_35: number
   price_42: number
-  price_50: number
-  price_supervisor: number
+  points: number
   category: string
 }
 
 function parsePriceList(text: string): ParsedProduct[] {
   const results: ParsedProduct[] = []
 
+  // Formato da tabela:
+  // SKU Nome  custo_pv  pontos  25%  35%  42%  50%  supervisor  custo_pv_final
   const productRegex = /([0-9A-Z]{4}[A-Z0-9]?)\s+(.+?)\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})/g
 
   let match
   while ((match = productRegex.exec(text)) !== null) {
-    const [, sku, name, costPv, points, consumer, p25, p35, p42, p50, supervisor] = match
+    const [, sku, name, , points, p25, p35, p42, p50, supervisor] = match
 
-    // Filtrar linhas falsas do cabeçalho (SUPER VISOR)
     const cleanName = name.trim().replace(/\s+/g, ' ')
     if (cleanName.includes('VISOR') && cleanName.includes('PV')) continue
     if (cleanName.length < 3) continue
 
     const parseNum = (s: string) => parseFloat(s.replace(',', '.'))
 
-    // Determinar categoria pela posição no texto
+    // Determinar categoria pela posição
     const posInText = match.index
     const textBefore = text.substring(0, posInText)
     const category = (textBefore.includes('Nutrição Externa') || textBefore.includes('N u t r i ç ã o   E x t e r n a'))
       ? 'Nutrição Externa'
       : 'Nutrição Interna'
 
+    // O preço de venda é o supervisor (que no PDF aparece como coluna "Preço Sugerido ao Consumidor")
+    // A ordem das colunas no PDF: custo_pv | pontos | 25% | 35% | 42% | 50% | supervisor | custo_pv
+    // O "supervisor" aqui é na verdade o Preço Sugerido ao Consumidor
+    const consumerPrice = parseNum(supervisor)
+    const costPrice50 = parseNum(p50)
+
     results.push({
       sku: sku.trim(),
       name: cleanName,
-      cost_pv: parseNum(costPv),
-      points: parseNum(points),
-      price_consumer: parseNum(consumer),
+      price_consumer: consumerPrice,
+      price_cost: costPrice50,
       price_25: parseNum(p25),
       price_35: parseNum(p35),
       price_42: parseNum(p42),
-      price_50: parseNum(p50),
-      price_supervisor: parseNum(supervisor),
+      points: parseNum(points),
       category,
     })
   }

@@ -8,13 +8,12 @@ import { slugify } from '@/lib/utils'
 interface ParsedProduct {
   sku: string
   name: string
-  points: number
   price_consumer: number
+  price_cost: number
   price_25: number
   price_35: number
   price_42: number
-  price_50: number
-  price_supervisor: number
+  points: number
   category: string
   status?: 'new' | 'update'
   existing_id?: string
@@ -25,7 +24,6 @@ export default function ImportPDFPage() {
   const [parsing, setParsing] = useState(false)
   const [importing, setImporting] = useState(false)
   const [products, setProducts] = useState<ParsedProduct[]>([])
-  const [selectedPrice, setSelectedPrice] = useState<'consumer' | '25' | '35' | '42' | '50'>('consumer')
   const [result, setResult] = useState<{ created: number; updated: number; errors: number } | null>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -39,42 +37,28 @@ export default function ImportPDFPage() {
     setParsing(true)
 
     try {
-      // Enviar para API parsear
       const formData = new FormData()
       formData.append('file', f)
       const res = await fetch('/api/import-pdf', { method: 'POST', body: formData })
       const data = await res.json()
-
       if (!res.ok) throw new Error(data.error || 'Erro ao parsear PDF')
 
       const parsed: ParsedProduct[] = data.products
 
-      // Verificar quais já existem
+      // Verificar quais já existem no banco
       const skus = parsed.map(p => p.sku)
       const { data: existing } = await supabase.from('products').select('id, sku').in('sku', skus)
       const existingMap = new Map(existing?.map(p => [p.sku, p.id]) || [])
 
-      const withStatus = parsed.map(p => ({
+      setProducts(parsed.map(p => ({
         ...p,
         status: (existingMap.has(p.sku) ? 'update' : 'new') as 'new' | 'update',
         existing_id: existingMap.get(p.sku),
-      }))
-
-      setProducts(withStatus)
+      })))
     } catch (err: any) {
       alert('Erro ao ler o arquivo: ' + err.message)
     }
     setParsing(false)
-  }
-
-  function getPrice(p: ParsedProduct): number {
-    switch (selectedPrice) {
-      case '25': return p.price_25
-      case '35': return p.price_35
-      case '42': return p.price_42
-      case '50': return p.price_50
-      default: return p.price_consumer
-    }
   }
 
   async function handleImport() {
@@ -84,7 +68,6 @@ export default function ImportPDFPage() {
     // Garantir categorias
     const categoryNames = [...new Set(products.map(p => p.category))]
     const categoryMap = new Map<string, string>()
-
     for (const catName of categoryNames) {
       const slug = slugify(catName)
       const { data: existing } = await supabase.from('categories').select('id').eq('slug', slug).single()
@@ -98,25 +81,23 @@ export default function ImportPDFPage() {
 
     // Importar produtos
     for (const product of products) {
-      const price = getPrice(product)
       try {
+        const productData = {
+          name: product.name,
+          price: product.price_consumer,      // Preço de venda = Sugerido ao Consumidor
+          cost_price: product.price_cost,      // Custo = 50% desconto
+          category_id: categoryMap.get(product.category) || null,
+        }
+
         if (product.status === 'update' && product.existing_id) {
-          await supabase.from('products').update({
-            name: product.name,
-            price,
-            compare_price: product.price_consumer !== price ? product.price_consumer : null,
-            category_id: categoryMap.get(product.category) || null,
-          }).eq('id', product.existing_id)
+          await supabase.from('products').update(productData).eq('id', product.existing_id)
           updated++
         } else {
           const slug = `${slugify(product.name)}-${product.sku.toLowerCase()}`
           await supabase.from('products').insert({
-            name: product.name,
+            ...productData,
             slug,
             sku: product.sku,
-            price,
-            compare_price: product.price_consumer !== price ? product.price_consumer : null,
-            category_id: categoryMap.get(product.category) || null,
             active: true,
             stock: 0,
             images: [],
@@ -144,9 +125,25 @@ export default function ImportPDFPage() {
         <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>
           Importar Lista de Preços
         </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Faça upload do PDF da lista de preços para cadastrar ou atualizar produtos automaticamente
-        </p>
+        <p className="text-slate-500 text-sm mt-1">Upload do PDF da Herbalife para cadastrar ou atualizar produtos automaticamente</p>
+      </div>
+
+      {/* Info dos preços */}
+      <div className="rounded-2xl p-5 border grid grid-cols-2 gap-4" style={{ background: '#f1f8f1', borderColor: '#c8e6c9' }}>
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">🏷️</span>
+          <div>
+            <p className="font-semibold text-sm" style={{ color: '#1B5E20' }}>Preço de Venda no Site</p>
+            <p className="text-xs text-slate-500 mt-0.5">Preço Sugerido ao Consumidor — coluna do PDF usada automaticamente</p>
+          </div>
+        </div>
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">💰</span>
+          <div>
+            <p className="font-semibold text-sm" style={{ color: '#1B5E20' }}>Seu Preço de Custo</p>
+            <p className="text-xs text-slate-500 mt-0.5">Coluna 50% — registrado internamente para controle de margem</p>
+          </div>
+        </div>
       </div>
 
       {/* Upload */}
@@ -180,29 +177,6 @@ export default function ImportPDFPage() {
         </label>
       </div>
 
-      {/* Seleção de preço */}
-      {products.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h3 className="font-semibold text-slate-900 mb-1" style={{ fontFamily: 'var(--font-display)' }}>Preço de Venda</h3>
-          <p className="text-sm text-slate-400 mb-4">Escolha qual coluna de preço usar como preço de venda na loja</p>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { key: 'consumer', label: '💰 Preço Sugerido ao Consumidor' },
-              { key: '25', label: '25% de desconto' },
-              { key: '35', label: '35% de desconto' },
-              { key: '42', label: '42% de desconto' },
-              { key: '50', label: '50% de desconto' },
-            ].map(opt => (
-              <button key={opt.key} onClick={() => setSelectedPrice(opt.key as any)}
-                className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-                style={selectedPrice === opt.key ? { background: '#1B5E20', color: '#fff' } : { background: '#e8f5e9', color: '#2E7D32' }}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Preview */}
       {products.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -232,8 +206,8 @@ export default function ImportPDFPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">SKU</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Produto</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Categoria</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Preço Venda</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">P. Consumidor</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Preço de Venda</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Seu Custo (50%)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -249,11 +223,13 @@ export default function ImportPDFPage() {
                       <p className="truncate">{p.name}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500">{p.category}</td>
-                    <td className="px-4 py-3 font-bold text-sm" style={{ color: '#1B5E20' }}>
-                      R$ {getPrice(p).toFixed(2).replace('.', ',')}
+                    <td className="px-4 py-3">
+                      <span className="font-bold text-sm" style={{ color: '#1B5E20' }}>
+                        R$ {p.price_consumer.toFixed(2).replace('.', ',')}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-400">
-                      R$ {p.price_consumer.toFixed(2).replace('.', ',')}
+                      R$ {p.price_cost.toFixed(2).replace('.', ',')}
                     </td>
                   </tr>
                 ))}
@@ -265,8 +241,8 @@ export default function ImportPDFPage() {
 
       {/* Resultado */}
       {result && (
-        <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
-          <h3 className="font-bold text-green-800 text-lg mb-4">✅ Importação Concluída!</h3>
+        <div className="rounded-2xl p-6" style={{ background: '#e8f5e9', border: '1px solid #c8e6c9' }}>
+          <h3 className="font-bold text-lg mb-4" style={{ color: '#1B5E20' }}>✅ Importação Concluída!</h3>
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="bg-white rounded-xl p-4 text-center border border-green-100">
               <p className="text-3xl font-bold text-green-600">{result.created}</p>
