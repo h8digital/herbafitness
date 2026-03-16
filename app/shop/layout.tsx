@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import ShopHeader from '@/components/shop/ShopHeader'
+import MobileHeader from '@/components/shop/mobile/MobileHeader'
+import BottomNav from '@/components/shop/mobile/BottomNav'
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -10,11 +11,12 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <ShopHeader profile={profile} />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen" style={{ background: '#f8fdf8' }}>
+      <MobileHeader profile={profile} />
+      <main className="pb-20 max-w-lg mx-auto">
         {children}
       </main>
+      <BottomNav />
     </div>
   )
 }
