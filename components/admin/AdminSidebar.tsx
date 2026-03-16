@@ -11,6 +11,7 @@ const navItems = [
   { href: '/admin/categories', label: 'Categorias', icon: '📂' },
   { href: '/admin/coupons', label: 'Cupons', icon: '🎟️' },
   { href: '/admin/stock', label: 'Estoque', icon: '📋' },
+  { href: '/admin/import', label: 'Importar Preços', icon: '📥' },
 ]
 
 export default function AdminSidebar() {
