@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Product, Category } from '@/types'
 import { slugify } from '@/lib/utils'
-import ImageCropUpload from '@/components/ui/ImageCropUpload'
+import ImageUpload from '@/components/ui/ImageUpload'
 
 interface ProductFormProps {
   product?: Product
@@ -298,11 +298,11 @@ export default function ProductForm({ product, categories, imageRatio = '4/5' }:
               <div className="flex gap-6 items-start">
                 {/* Upload com crop */}
                 <div className="flex-shrink-0">
-                  <ImageCropUpload
+                  <ImageUpload
                     label="Imagem Principal"
                     value={form.image_url}
                     folder="products"
-                    aspectRatio={imageRatio}
+                    
                     onChange={(url, path) => {
                       set('image_url', url)
                     }}

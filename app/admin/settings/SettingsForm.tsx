@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import ImageCropUpload from '@/components/ui/ImageCropUpload'
+import ImageUpload from '@/components/ui/ImageUpload'
 
 interface Settings {
   id: string
@@ -148,7 +148,7 @@ export default function SettingsForm({ settings }: { settings: Settings | null }
           <h3 className="font-semibold text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>Dados da Loja</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <ImageCropUpload label="Logo da Loja" value={form.store_logo_url} folder="logo" aspectRatio="16/9"
+              <ImageUpload label="Logo da Loja" value={form.store_logo_url} folder="logo"
                 onChange={(url, path) => { set('store_logo_url', url); set('store_logo_storage_path', path) }} />
               <p className="text-xs text-slate-400 mt-1.5">PNG transparente recomendado · 400×200px</p>
             </div>
@@ -289,7 +289,7 @@ export default function SettingsForm({ settings }: { settings: Settings | null }
           </div>
           <div>
             <label className={lc}>Imagem de Compartilhamento (Open Graph)</label>
-            <ImageCropUpload value={form.seo_og_image} folder="seo" aspectRatio="16/9" onChange={(url) => set('seo_og_image', url)} />
+            <ImageUpload value={form.seo_og_image} folder="seo" onChange={(url) => set('seo_og_image', url)} />
             <p className="text-xs text-slate-400 mt-1.5">Aparece ao compartilhar no WhatsApp, Facebook, etc. Recomendado: 1200×630px</p>
           </div>
           {(form.seo_title || form.seo_description) && (
