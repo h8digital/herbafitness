@@ -3,9 +3,19 @@ import ProductForm from '../../ProductForm'
 import BundleManager from '../../BundleManager'
 import VariationManager from '../../VariationManager'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 
-export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+type Section = 'dados' | 'variacoes' | 'pacotes'
+
+export default async function EditProductPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ section?: string }>
+}) {
   const { id } = await params
+  const { section = 'dados' } = await searchParams
   const supabase = await createClient()
 
   const [
@@ -26,25 +36,99 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   if (!product) notFound()
 
+  const sections = [
+    { key: 'dados',     label: 'Dados do Produto', icon: '📝', desc: 'Nome, preço, estoque, imagem' },
+    { key: 'variacoes', label: 'Variações',         icon: '🎨', desc: `${(variationTypes || []).length} tipos criados`, highlight: true },
+    { key: 'pacotes',   label: 'Pacotes & Combos',  icon: '📦', desc: `${(bundles || []).length} pacotes · ${(suggestions || []).length} sugestões` },
+  ]
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>Editar Produto</h1>
-        <p className="text-slate-500 text-sm mt-1">{product.name}</p>
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link href="/admin/products" className="text-slate-400 hover:text-slate-600 transition-colors">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>
+            Editar Produto
+          </h1>
+          <p className="text-slate-500 text-sm">{product.name}</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${product.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+            {product.active ? '● Ativo' : '○ Inativo'}
+          </span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <h2 className="text-lg font-semibold text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>Dados do Produto</h2>
+      {/* Navegação entre seções */}
+      <div className="grid grid-cols-3 gap-3">
+        {sections.map(sec => (
+          <Link key={sec.key} href={`/admin/products/${id}/edit?section=${sec.key}`}
+            className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${
+              section === sec.key
+                ? 'border-green-500 bg-green-50'
+                : 'border-slate-200 bg-white hover:border-green-300'
+            }`}>
+            <span className="text-2xl flex-shrink-0">{sec.icon}</span>
+            <div className="min-w-0">
+              <p className={`font-semibold text-sm ${section === sec.key ? 'text-green-800' : 'text-slate-900'}`}>
+                {sec.label}
+                {sec.highlight && (variationTypes || []).length === 0 && (
+                  <span className="ml-1.5 text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold">NOVO</span>
+                )}
+              </p>
+              <p className="text-xs text-slate-400 truncate">{sec.desc}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Conteúdo da seção selecionada */}
+      {section === 'dados' && (
+        <div className="max-w-2xl">
           <ProductForm product={product} categories={categories || []} />
         </div>
-        <div className="space-y-6">
-          <h2 className="text-lg font-semibold text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>Variações, Pacotes & Sugestões</h2>
+      )}
+
+      {section === 'variacoes' && (
+        <div className="max-w-2xl">
+          {/* Instruções */}
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-6">
+            <h3 className="font-bold text-blue-900 mb-2">🎨 Como usar Variações</h3>
+            <ol className="space-y-1.5 text-sm text-blue-700">
+              <li><strong>1.</strong> Crie um <strong>Tipo de Variação</strong> — ex: <em>Sabor</em>, <em>Tamanho</em>, <em>Cor</em></li>
+              <li><strong>2.</strong> Adicione as <strong>opções</strong> desse tipo — ex: <em>Chocolate</em>, <em>Baunilha</em>, <em>Morango</em></li>
+              <li><strong>3.</strong> Cada opção pode ter <strong>preço diferente</strong> e <strong>estoque próprio</strong></li>
+              <li><strong>4.</strong> O cliente escolhe antes de adicionar ao carrinho</li>
+            </ol>
+          </div>
           <VariationManager
             productId={product.id}
             productPrice={product.price}
             variationTypes={variationTypes || []}
           />
+        </div>
+      )}
+
+      {section === 'pacotes' && (
+        <div className="max-w-2xl">
+          <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mb-6">
+            <h3 className="font-bold text-orange-900 mb-2">📦 Pacotes & Combos</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm text-orange-700">
+              <div>
+                <p className="font-semibold mb-1">Pacotes de Quantidade</p>
+                <p>Ex: 2 unidades por R$ 444 em vez de R$ 468. Estimula compra em maior volume.</p>
+              </div>
+              <div>
+                <p className="font-semibold mb-1">Produtos Comprados Juntos</p>
+                <p>Ex: Shake + NRG. O sistema também sugere automaticamente baseado nas vendas.</p>
+              </div>
+            </div>
+          </div>
           <BundleManager
             product={product as any}
             bundles={bundles || []}
@@ -52,7 +136,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
             allProducts={allProducts || []}
           />
         </div>
-      </div>
+      )}
     </div>
   )
 }
