@@ -96,7 +96,6 @@ export default function VariationSelector({
   function handleAddAll() {
     if (hasVariations && !allVariationsSelected) return
 
-    // Nome do produto com variação
     const variantName = hasVariations
       ? `${product.name} (${variationTypes.map(t => {
           const opt = t.options.find(o => o.id === selected[t.id])
@@ -104,8 +103,17 @@ export default function VariationSelector({
         }).join(', ')})`
       : product.name
 
-    // Adicionar produto principal
-    const mainProduct = { ...product, name: variantName, price: basePrice }
+    // Quando bundle: preço unitário = preço do pacote / quantidade (ex: R$199/2 = R$99,50)
+    // Assim carrinho mostra 2x R$99,50 = R$199,00 (correto) em vez de 2x R$121,00 (errado)
+    const unitPriceForCart = selectedBundle !== 'unit' && bundleObj
+      ? bundleObj.price / bundleObj.quantity
+      : basePrice
+
+    const productName = selectedBundle !== 'unit' && bundleObj
+      ? `${variantName} (Pacote ${bundleObj.quantity}x)`
+      : variantName
+
+    const mainProduct = { ...product, name: productName, price: unitPriceForCart }
     addItem(mainProduct as Product, mainQty)
 
     // Adicionar produtos cruzados selecionados
