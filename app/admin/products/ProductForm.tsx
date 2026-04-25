@@ -13,7 +13,7 @@ interface ProductFormProps {
   imageRatio?: '3/4' | '4/5' | '1/1' | '4/3' | '16/9'
 }
 
-type Tab = 'basico' | 'preco' | 'estoque' | 'imagens' | 'frete'
+type Tab = 'basico' | 'preco' | 'estoque' | 'frete'
 
 export default function ProductForm({ product, categories, imageRatio = '4/5' }: ProductFormProps) {
   const router = useRouter()
@@ -73,44 +73,43 @@ export default function ProductForm({ product, categories, imageRatio = '4/5' }:
       active: form.active,
       featured: form.featured,
       tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-      images: form.image_url ? [{ url: form.image_url, position: 0 }] : [],
+      images: form.image_url
+        ? [{ url: form.image_url, alt: form.name, position: 0 }]
+        : [],
     }
 
-    let result
-    if (product) {
-      result = await supabase.from('products').update(data).eq('id', product.id)
-    } else {
-      result = await supabase.from('products').insert(data)
-    }
-
-    if (result.error) {
-      setError(result.error.message)
+    try {
+      if (product?.id) {
+        const { error } = await supabase.from('products').update(data).eq('id', product.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('products').insert(data)
+        if (error) throw error
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao salvar produto')
+    } finally {
       setLoading(false)
-      return
     }
-
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-    if (!product) router.push('/admin/products')
-    else router.refresh()
-    setLoading(false)
   }
 
   const ic = "w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
   const lc = "block text-sm font-medium text-slate-700 mb-1.5"
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
-    { key: 'basico',  label: 'Informações', icon: '📝' },
-    { key: 'preco',   label: 'Preços',      icon: '💰' },
-    { key: 'estoque', label: 'Estoque',     icon: '📦' },
-    { key: 'imagens', label: 'Imagem',      icon: '🖼️' },
-    { key: 'frete',   label: 'Frete',       icon: '🚚' },
+    { key: 'basico',   label: 'Informações', icon: '📝' },
+    { key: 'preco',    label: 'Preços',      icon: '💰' },
+    { key: 'estoque',  label: 'Estoque',     icon: '📦' },
+    { key: 'frete',    label: 'Frete',       icon: '🚚' },
   ]
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Status toggles no topo */}
-      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 flex items-center gap-6">
+    <form onSubmit={handleSubmit}>
+      {/* Toggles + categoria */}
+      <div className="flex items-center gap-6 mb-5 flex-wrap">
         <label className="flex items-center gap-3 cursor-pointer">
           <div onClick={() => set('active', !form.active)}
             className="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
@@ -136,262 +135,226 @@ export default function ProductForm({ product, categories, imageRatio = '4/5' }:
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="flex overflow-x-auto border-b border-slate-100">
-          {tabs.map(tab => (
-            <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
-                activeTab === tab.key
-                  ? 'border-green-600 text-green-700 bg-green-50'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}>
-              <span>{tab.icon}</span><span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
+      {/* Layout de duas colunas: formulário + imagem */}
+      <div className="flex gap-6 items-start">
 
-        <div className="p-6">
-          {/* ── INFORMAÇÕES BÁSICAS ── */}
-          {activeTab === 'basico' && (
-            <div className="space-y-4">
-              <div>
-                <label className={lc}>Nome do Produto *</label>
-                <input className={ic} value={form.name}
-                  onChange={e => { set('name', e.target.value); set('slug', slugify(e.target.value)) }}
-                  placeholder="Nome do produto" required />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={lc}>Slug (URL)</label>
-                  <input className={ic} value={form.slug} onChange={e => set('slug', e.target.value)} />
-                </div>
-                <div>
-                  <label className={lc}>SKU</label>
-                  <input className={ic} value={form.sku} onChange={e => set('sku', e.target.value)} placeholder="PROD-001" />
-                </div>
-              </div>
-              <div>
-                <label className={lc}>Descrição Curta</label>
-                <textarea className={ic} value={form.short_description}
-                  onChange={e => set('short_description', e.target.value)}
-                  rows={2} placeholder="Resumo exibido no card do produto..." />
-              </div>
-              <div>
-                <label className={lc}>Descrição Completa</label>
-                <textarea className={ic} value={form.description}
-                  onChange={e => set('description', e.target.value)}
-                  rows={6} placeholder="Descrição detalhada exibida na página do produto..." />
-              </div>
-              <div>
-                <label className={lc}>Tags</label>
-                <input className={ic} value={form.tags} onChange={e => set('tags', e.target.value)}
-                  placeholder="shake, proteína, chocolate — separe por vírgula" />
-              </div>
+        {/* Coluna esquerda — tabs + campos */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+
+            {/* Tabs */}
+            <div className="flex overflow-x-auto border-b border-slate-100">
+              {tabs.map(tab => (
+                <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+                    activeTab === tab.key
+                      ? 'border-green-600 text-green-700 bg-green-50'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}>
+                  <span>{tab.icon}</span><span>{tab.label}</span>
+                </button>
+              ))}
             </div>
-          )}
 
-          {/* ── PREÇOS ── */}
-          {activeTab === 'preco' && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                  <label className="block text-sm font-semibold text-green-800 mb-2">
-                    💰 Preço de Venda (exibido ao cliente) *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-medium">R$</span>
-                    <input className="w-full pl-10 pr-4 py-3 border-2 border-green-300 rounded-xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                      value={form.price} onChange={e => set('price', e.target.value)}
-                      type="number" step="0.01" min="0" placeholder="0,00" required />
-                  </div>
-                </div>
+            <div className="p-6">
 
-                <div className="grid grid-cols-2 gap-4">
+              {/* ── INFORMAÇÕES BÁSICAS ── */}
+              {activeTab === 'basico' && (
+                <div className="space-y-4">
                   <div>
-                    <label className={lc}>
-                      Preço Original <span className="text-slate-400 font-normal">(riscado)</span>
-                    </label>
-                    <p className="text-xs text-slate-400 mb-2">Mostra como "de R$ X por R$ Y"</p>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">R$</span>
-                      <input className={`${ic} pl-9`} value={form.compare_price}
-                        onChange={e => set('compare_price', e.target.value)}
-                        type="number" step="0.01" min="0" placeholder="0,00" />
+                    <label className={lc}>Nome do Produto *</label>
+                    <input className={ic} value={form.name}
+                      onChange={e => { set('name', e.target.value); set('slug', slugify(e.target.value)) }}
+                      placeholder="Nome do produto" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={lc}>Slug (URL)</label>
+                      <input className={ic} value={form.slug} onChange={e => set('slug', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className={lc}>SKU</label>
+                      <input className={ic} value={form.sku} onChange={e => set('sku', e.target.value)} placeholder="PROD-001" />
                     </div>
                   </div>
                   <div>
-                    <label className={lc}>
-                      Preço de Custo <span className="text-slate-400 font-normal">(interno)</span>
-                    </label>
-                    <p className="text-xs text-slate-400 mb-2">Visível apenas para o admin</p>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">R$</span>
-                      <input className={`${ic} pl-9`} value={form.cost_price}
-                        onChange={e => set('cost_price', e.target.value)}
-                        type="number" step="0.01" min="0" placeholder="0,00" />
-                    </div>
+                    <label className={lc}>Descrição Curta</label>
+                    <textarea className={ic} value={form.short_description}
+                      onChange={e => set('short_description', e.target.value)}
+                      rows={2} placeholder="Resumo exibido no card do produto..." />
                   </div>
-                </div>
-
-                {/* Preview de margem */}
-                {form.price && form.cost_price && (
-                  <div className="bg-slate-50 rounded-xl p-4 text-sm">
-                    <p className="font-medium text-slate-700 mb-2">📊 Análise de Margem</p>
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                      <div>
-                        <p className="text-xs text-slate-400">Preço Venda</p>
-                        <p className="font-bold text-slate-900">R$ {parseFloat(form.price).toFixed(2).replace('.',',')}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-400">Seu Custo</p>
-                        <p className="font-bold text-slate-900">R$ {parseFloat(form.cost_price).toFixed(2).replace('.',',')}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-400">Lucro</p>
-                        <p className="font-bold text-green-600">
-                          R$ {(parseFloat(form.price) - parseFloat(form.cost_price)).toFixed(2).replace('.',',')}
-                          {' '}
-                          <span className="text-xs">
-                            ({Math.round(((parseFloat(form.price) - parseFloat(form.cost_price)) / parseFloat(form.price)) * 100)}%)
-                          </span>
-                        </p>
-                      </div>
-                    </div>
+                  <div>
+                    <label className={lc}>Descrição Completa</label>
+                    <textarea className={ic} value={form.description}
+                      onChange={e => set('description', e.target.value)}
+                      rows={5} placeholder="Descrição detalhada do produto..." />
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── ESTOQUE ── */}
-          {activeTab === 'estoque' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={lc}>Quantidade em Estoque</label>
-                  <input className={ic} value={form.stock} onChange={e => set('stock', e.target.value)}
-                    type="number" min="0" placeholder="0" />
-                </div>
-                <div>
-                  <label className={lc}>Estoque Mínimo (alerta)</label>
-                  <input className={ic} value={form.min_stock} onChange={e => set('min_stock', e.target.value)}
-                    type="number" min="0" placeholder="5" />
-                  <p className="text-xs text-slate-400 mt-1">Alerta quando atingir este nível</p>
-                </div>
-              </div>
-              {parseInt(form.stock) <= parseInt(form.min_stock) && form.stock !== '' && (
-                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-sm text-orange-700">
-                  ⚠️ Estoque atual está abaixo ou igual ao mínimo configurado
+                  <div>
+                    <label className={lc}>Tags</label>
+                    <input className={ic} value={form.tags} onChange={e => set('tags', e.target.value)}
+                      placeholder="shake, proteína, chocolate (separadas por vírgula)" />
+                  </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* ── IMAGEM ── */}
-          {activeTab === 'imagens' && (
-            <div className="space-y-5">
-              <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-sm text-green-800">
-                📸 A imagem é <strong>enviada e salva no servidor</strong> (Supabase Storage). O crop garante a proporção <strong>3×4</strong> ideal para exibição nos cards de produto.
-              </div>
-
-              <div className="flex gap-6 items-start">
-                {/* Upload com crop */}
-                <div className="flex-shrink-0">
-                  <ImageUpload
-                    label="Imagem Principal"
-                    value={form.image_url}
-                    folder="products"
-                    
-                    onChange={(url, path) => {
-                      set('image_url', url)
-                    }}
-                  />
-                </div>
-
-                {/* Dicas */}
-                <div className="flex-1 space-y-3 pt-6">
-                  <div className="space-y-2 text-sm text-slate-600">
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-500 mt-0.5">✓</span>
-                      <span>Clique na área para selecionar uma foto</span>
+              {/* ── PREÇOS ── */}
+              {activeTab === 'preco' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={lc}>Preço de Venda *</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">R$</span>
+                        <input className={`${ic} pl-10`} value={form.price} onChange={e => set('price', e.target.value)}
+                          type="number" step="0.01" min="0" placeholder="0,00" required />
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-500 mt-0.5">✓</span>
-                      <span>Arraste para enquadrar o produto</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-500 mt-0.5">✓</span>
-                      <span>A imagem é salva em proporção <strong>{imageRatio}</strong> ({imageRatio === '4/5' ? '800×1000px' : imageRatio === '3/4' ? '600×800px' : imageRatio === '1/1' ? '800×800px' : '800×600px'})</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-500 mt-0.5">✓</span>
-                      <span>Formato WebP otimizado para web</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-500 mt-0.5">✓</span>
-                      <span>Aceita JPG, PNG ou WebP até 10MB</span>
+                    <div>
+                      <label className={lc}>Preço Original (riscado)</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">R$</span>
+                        <input className={`${ic} pl-10`} value={form.compare_price} onChange={e => set('compare_price', e.target.value)}
+                          type="number" step="0.01" min="0" placeholder="0,00" />
+                      </div>
                     </div>
                   </div>
-
-                  {form.image_url && (
-                    <button type="button" onClick={() => set('image_url', '')}
-                      className="text-xs text-red-400 hover:text-red-600 underline transition-colors">
-                      Remover imagem
-                    </button>
+                  <div>
+                    <label className={lc}>Seu Custo</label>
+                    <div className="relative max-w-xs">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">R$</span>
+                      <input className={`${ic} pl-10`} value={form.cost_price} onChange={e => set('cost_price', e.target.value)}
+                        type="number" step="0.01" min="0" placeholder="0,00" />
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Não é exibido para clientes. Usado para calcular margem.</p>
+                  </div>
+                  {form.price && form.cost_price && parseFloat(form.price) > 0 && parseFloat(form.cost_price) > 0 && (
+                    <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                      <p className="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wide">Análise de Margem</p>
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <p className="text-xs text-slate-400">Preço de Venda</p>
+                          <p className="font-bold text-slate-900">R$ {parseFloat(form.price).toFixed(2).replace('.',',')}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400">Seu Custo</p>
+                          <p className="font-bold text-slate-900">R$ {parseFloat(form.cost_price).toFixed(2).replace('.',',')}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400">Lucro</p>
+                          <p className="font-bold text-green-600">
+                            R$ {(parseFloat(form.price) - parseFloat(form.cost_price)).toFixed(2).replace('.',',')}
+                            {' '}
+                            <span className="text-xs">
+                              ({Math.round(((parseFloat(form.price) - parseFloat(form.cost_price)) / parseFloat(form.price)) * 100)}%)
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* ── FRETE ── */}
-          {activeTab === 'frete' && (
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
-                📦 Essas dimensões são usadas para calcular o frete via SuperFrete
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={lc}>Peso (kg)</label>
-                  <input className={ic} value={form.weight} onChange={e => set('weight', e.target.value)}
-                    type="number" step="0.001" min="0" placeholder="ex: 0.500" />
+              {/* ── ESTOQUE ── */}
+              {activeTab === 'estoque' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={lc}>Quantidade em Estoque</label>
+                      <input className={ic} value={form.stock} onChange={e => set('stock', e.target.value)}
+                        type="number" min="0" placeholder="0" />
+                    </div>
+                    <div>
+                      <label className={lc}>Estoque Mínimo (alerta)</label>
+                      <input className={ic} value={form.min_stock} onChange={e => set('min_stock', e.target.value)}
+                        type="number" min="0" placeholder="5" />
+                      <p className="text-xs text-slate-400 mt-1">Alerta quando atingir este nível</p>
+                    </div>
+                  </div>
+                  {parseInt(form.stock) <= parseInt(form.min_stock) && form.stock !== '' && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-sm text-orange-700">
+                      ⚠️ Estoque atual está abaixo ou igual ao mínimo configurado
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className={lc}>Comprimento (cm)</label>
-                  <input className={ic} value={form.length} onChange={e => set('length', e.target.value)}
-                    type="number" step="0.1" min="0" placeholder="ex: 20" />
+              )}
+
+              {/* ── FRETE ── */}
+              {activeTab === 'frete' && (
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-500">Dimensões e peso usados para calcular o frete via SuperFrete.</p>
+                  <div>
+                    <label className={lc}>Peso (kg)</label>
+                    <input className={ic} value={form.weight} onChange={e => set('weight', e.target.value)}
+                      type="number" step="0.001" min="0" placeholder="0.500" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className={lc}>Comprimento (cm)</label>
+                      <input className={ic} value={form.length} onChange={e => set('length', e.target.value)}
+                        type="number" step="0.1" min="0" placeholder="20" />
+                    </div>
+                    <div>
+                      <label className={lc}>Largura (cm)</label>
+                      <input className={ic} value={form.width} onChange={e => set('width', e.target.value)}
+                        type="number" step="0.1" min="0" placeholder="15" />
+                    </div>
+                    <div>
+                      <label className={lc}>Altura (cm)</label>
+                      <input className={ic} value={form.height} onChange={e => set('height', e.target.value)}
+                        type="number" step="0.1" min="0" placeholder="10" />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className={lc}>Largura (cm)</label>
-                  <input className={ic} value={form.width} onChange={e => set('width', e.target.value)}
-                    type="number" step="0.1" min="0" placeholder="ex: 15" />
-                </div>
-                <div>
-                  <label className={lc}>Altura (cm)</label>
-                  <input className={ic} value={form.height} onChange={e => set('height', e.target.value)}
-                    type="number" step="0.1" min="0" placeholder="ex: 10" />
-                </div>
-              </div>
+              )}
+
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Coluna direita — imagem */}
+        <div className="flex-shrink-0 w-64">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 sticky top-6">
+            <p className="text-sm font-semibold text-slate-700 mb-4">Foto do Produto</p>
+            <ImageUpload
+              value={form.image_url}
+              folder="products"
+              onChange={(url) => set('image_url', url)}
+            />
+            <p className="text-xs text-slate-400 mt-3 text-center">
+              Aceita JPG, PNG ou WebP até 10MB
+            </p>
+            {form.image_url && (
+              <button type="button" onClick={() => set('image_url', '')}
+                className="mt-2 w-full text-xs text-red-400 hover:text-red-600 transition-colors text-center">
+                Remover imagem
+              </button>
+            )}
+          </div>
+        </div>
+
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{error}</div>
-      )}
-
-      <div className="flex gap-3">
-        <button type="button" onClick={() => router.back()}
-          className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 px-6 rounded-xl transition-colors text-sm">
-          Cancelar
-        </button>
-        <button type="submit" disabled={loading}
-          className="flex-1 font-semibold py-3 px-8 rounded-xl transition-all text-white disabled:opacity-60 text-sm"
-          style={{ background: saved ? '#16a34a' : 'linear-gradient(135deg, #1B5E20, #388E3C)' }}>
-          {loading ? 'Salvando...' : saved ? '✓ Salvo!' : product ? 'Salvar Alterações' : 'Criar Produto'}
-        </button>
+      {/* Rodapé: erro + salvar */}
+      <div className="flex items-center justify-between mt-6">
+        <div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+        </div>
+        <div className="flex items-center gap-3">
+          {saved && (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 border border-green-200">
+              <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-sm font-semibold text-green-700">Salvo!</span>
+            </div>
+          )}
+          <button type="submit" disabled={loading}
+            className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-colors"
+            style={{ background: '#1B5E20' }}>
+            {loading ? 'Salvando...' : product?.id ? 'Salvar Alterações' : 'Criar Produto'}
+          </button>
+        </div>
       </div>
     </form>
   )
