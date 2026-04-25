@@ -54,7 +54,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       .eq('product_id', product.id)
       .eq('approved', true)
       .order('created_at', { ascending: false }),
-    // Relacionados: mesma categoria, exceto o atual
     product.category_id
       ? supabase.from('products').select('*, categories(name)').eq('active', true)
           .eq('category_id', product.category_id).neq('id', product.id).limit(4)
@@ -92,7 +91,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <>
-      <ProductViewTracker productId={product.id} userId={user?.id} />
+      {/* ── ProductViewTracker com prop correta: customerId ── */}
+      <ProductViewTracker productId={product.id} customerId={user?.id} />
 
       <div className="pb-16 lg:pb-20">
         {/* Breadcrumb */}
@@ -113,7 +113,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         {/* ── ÁREA PRINCIPAL: imagem + info ── */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-10 lg:items-start px-4 lg:px-6">
 
-          {/* Coluna esquerda — imagem */}
+          {/* Coluna esquerda — imagem sticky */}
           <div className="relative mb-6 lg:mb-0 lg:sticky lg:top-6">
             <div className="relative rounded-3xl overflow-hidden bg-white border border-slate-100"
               style={{ aspectRatio: '1/1' }}>
@@ -194,10 +194,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
             {/* Estoque */}
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${product.stock > 5 ? 'bg-green-500' : product.stock > 0 ? 'bg-yellow-400' : 'bg-red-400'}`} />
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                product.stock > 5 ? 'bg-green-500' : product.stock > 0 ? 'bg-yellow-400' : 'bg-red-400'
+              }`} />
               <p className="text-sm font-medium" style={{ color: product.stock > 0 ? '#1B5E20' : '#ef4444' }}>
-                {product.stock > 5 ? `${product.stock} em estoque`
-                  : product.stock > 0 ? `Apenas ${product.stock} restante${product.stock !== 1 ? 's' : ''}!`
+                {product.stock > 5
+                  ? `${product.stock} em estoque`
+                  : product.stock > 0
+                  ? `Apenas ${product.stock} restante${product.stock !== 1 ? 's' : ''}!`
                   : 'Fora de estoque'}
               </p>
             </div>
@@ -227,7 +231,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             {product.tags && product.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {product.tags.map((tag: string) => (
-                  <span key={tag} className="bg-green-50 text-green-700 text-xs px-3 py-1 rounded-full font-medium border border-green-100">
+                  <span key={tag}
+                    className="bg-green-50 text-green-700 text-xs px-3 py-1 rounded-full font-medium border border-green-100">
                     #{tag}
                   </span>
                 ))}
@@ -243,9 +248,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <h2 className="text-lg font-black text-slate-900 mb-4" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                 Sobre o Produto
               </h2>
-              <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap prose-sm max-w-none">
+              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
                 {product.description}
-              </div>
+              </p>
             </div>
           </div>
         )}
