@@ -20,96 +20,114 @@ interface Particle {
   shape: 'circle' | 'star'
 }
 
-function FireworksCanvas({ active }: { active: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const particlesRef = useRef<Particle[]>([])
-  const animFrameRef = useRef<number>(0)
-  const idRef = useRef(0)
+const COLORS = ['#4CAF50', '#FFD700', '#FF6B35', '#A855F7', '#06B6D4', '#F43F5E', '#84CC16', '#FBBF24']
 
-  const COLORS = ['#4CAF50', '#FFD700', '#FF6B35', '#A855F7', '#06B6D4', '#F43F5E', '#84CC16', '#FBBF24']
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath()
+  for (let i = 0; i < 5; i++) {
+    const a = (Math.PI / 2.5) * i - Math.PI / 2
+    const b = a + Math.PI / 5
+    ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r)
+    ctx.lineTo(cx + Math.cos(b) * r * 0.45, cy + Math.sin(b) * r * 0.45)
+  }
+  ctx.closePath()
+  ctx.fill()
+}
 
-  function burst(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
-    const count = 60
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3
-      const speed = 2.5 + Math.random() * 4
-      particlesRef.current.push({
-        id: idRef.current++,
-        x: cx, y: cy,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        life: 1,
-        size: 3 + Math.random() * 4,
-        shape: Math.random() > 0.5 ? 'circle' : 'star',
-      })
+function spawnBurst(particles: Particle[], idRef: { current: number }, cx: number, cy: number) {
+  const count = 60
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3
+    const speed = 2.5 + Math.random() * 4
+    particles.push({
+      id: idRef.current++,
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      life: 1,
+      size: 3 + Math.random() * 4,
+      shape: Math.random() > 0.5 ? 'circle' : 'star',
+    })
+  }
+}
+
+function runAnimation(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  particles: Particle[],
+  rafRef: { current: number },
+) {
+  ctx.clearRect(0, 0, w, h)
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]
+    p.x += p.vx
+    p.y += p.vy
+    p.vy += 0.12
+    p.vx *= 0.97
+    p.life -= 0.018
+    if (p.life <= 0.02) { particles.splice(i, 1); continue }
+    ctx.globalAlpha = p.life
+    ctx.fillStyle = p.color
+    if (p.shape === 'star') {
+      drawStar(ctx, p.x, p.y, p.size)
+    } else {
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2)
+      ctx.fill()
     }
   }
+  ctx.globalAlpha = 1
+  if (particles.length > 0) {
+    rafRef.current = requestAnimationFrame(() => runAnimation(ctx, w, h, particles, rafRef))
+  }
+}
+
+function FireworksCanvas({ active }: { active: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const rafRef = useRef<number>(0)
+  const idRef = useRef(0)
 
   useEffect(() => {
     if (!active) return
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    const el = canvasRef.current
+    if (!el) return
+    const ctx = el.getContext('2d')
     if (!ctx) return
 
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
+    el.width = window.innerWidth
+    el.height = window.innerHeight
+    const w = el.width
+    const h = el.height
+
+    const particles: Particle[] = []
 
     const positions = [
-      { x: canvas.width * 0.25, y: canvas.height * 0.35 },
-      { x: canvas.width * 0.55, y: canvas.height * 0.25 },
-      { x: canvas.width * 0.80, y: canvas.height * 0.40 },
+      { x: w * 0.25, y: h * 0.35 },
+      { x: w * 0.55, y: h * 0.25 },
+      { x: w * 0.80, y: h * 0.40 },
     ]
+
     positions.forEach((pos, i) => {
-      setTimeout(() => burst(ctx, pos.x, pos.y), i * 220)
+      setTimeout(() => spawnBurst(particles, idRef, pos.x, pos.y), i * 220)
     })
     setTimeout(() => {
       positions.forEach((pos, i) => {
-        setTimeout(() => burst(ctx, pos.x + 30, pos.y + 40), i * 180)
+        setTimeout(() => spawnBurst(particles, idRef, pos.x + 30, pos.y + 40), i * 180)
       })
     }, 700)
 
-    function drawStar(c: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
-      c.beginPath()
-      for (let i = 0; i < 5; i++) {
-        const a = (Math.PI / 2.5) * i - Math.PI / 2
-        const b = a + Math.PI / 5
-        c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r)
-        c.lineTo(cx + Math.cos(b) * r * 0.45, cy + Math.sin(b) * r * 0.45)
-      }
-      c.closePath()
-      c.fill()
-    }
+    // Começa a animação após a primeira explosão aparecer
+    setTimeout(() => {
+      rafRef.current = requestAnimationFrame(() => runAnimation(ctx, w, h, particles, rafRef))
+    }, 50)
 
-    function animate(c: CanvasRenderingContext2D) {
-      c.clearRect(0, 0, canvas.width, canvas.height)
-      particlesRef.current = particlesRef.current.filter(p => p.life > 0.02)
-      for (const p of particlesRef.current) {
-        p.x += p.vx
-        p.y += p.vy
-        p.vy += 0.12
-        p.vx *= 0.97
-        p.life -= 0.018
-        c.globalAlpha = p.life
-        c.fillStyle = p.color
-        if (p.shape === 'star') {
-          drawStar(c, p.x, p.y, p.size)
-        } else {
-          c.beginPath()
-          c.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2)
-          c.fill()
-        }
-      }
-      if (particlesRef.current.length > 0) {
-        animFrameRef.current = requestAnimationFrame(() => animate(c))
-      }
-    }
-    animFrameRef.current = requestAnimationFrame(() => animate(ctx))
-    return () => cancelAnimationFrame(animFrameRef.current)
+    return () => cancelAnimationFrame(rafRef.current)
   }, [active])
 
   if (!active) return null
+
   return (
     <canvas
       ref={canvasRef}
@@ -124,22 +142,22 @@ export default function FreeShippingBar({ threshold }: FreeShippingBarProps) {
   const subtotal = calcSubtotal(items)
   const [celebrated, setCelebrated] = useState(false)
   const [showFireworks, setShowFireworks] = useState(false)
-  const prevSubtotalRef = useRef(0)
+  const prevRef = useRef(0)
 
   const reached = subtotal >= threshold
   const progress = Math.min((subtotal / threshold) * 100, 100)
   const remaining = Math.max(threshold - subtotal, 0)
 
   useEffect(() => {
-    if (reached && !celebrated && prevSubtotalRef.current < threshold) {
+    if (reached && !celebrated && prevRef.current < threshold) {
       setCelebrated(true)
       setShowFireworks(true)
       setTimeout(() => setShowFireworks(false), 3500)
     }
-    if (!reached && subtotal < prevSubtotalRef.current) {
+    if (!reached && subtotal < prevRef.current) {
       setCelebrated(false)
     }
-    prevSubtotalRef.current = subtotal
+    prevRef.current = subtotal
   }, [subtotal, reached, celebrated, threshold])
 
   if (items.length === 0) return null
@@ -215,9 +233,9 @@ export default function FreeShippingBar({ threshold }: FreeShippingBarProps) {
 
       <style>{`
         @keyframes bounceIn {
-          0% { transform: scale(0.5); opacity: 0; }
-          60% { transform: scale(1.1); opacity: 1; }
-          100% { transform: scale(1); }
+          0%   { transform: scale(0.5); opacity: 0; }
+          60%  { transform: scale(1.1); opacity: 1; }
+          100% { transform: scale(1);   opacity: 1; }
         }
       `}</style>
     </>
