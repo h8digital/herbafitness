@@ -74,7 +74,6 @@ export default function DesktopSidebar({ categories, currentCategory, currentSea
 
       {/* Links */}
       <nav className={`py-2 space-y-0.5 ${collapsed ? 'px-2' : 'px-3'}`}>
-        {/* Todos */}
         <button
           onClick={() => navigate('/shop')}
           title={collapsed ? 'Todos os Produtos' : undefined}
@@ -92,7 +91,6 @@ export default function DesktopSidebar({ categories, currentCategory, currentSea
           {!collapsed && <span className="truncate">Todos</span>}
         </button>
 
-        {/* Categorias */}
         {categories.map(cat => {
           const isActive = currentCategory === cat.id
           return (
