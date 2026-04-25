@@ -26,15 +26,15 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
-  const isShopRoute = request.nextUrl.pathname.startsWith('/shop')
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
+  const isShopRoute  = request.nextUrl.pathname.startsWith('/shop')
+  const isAuthRoute  = request.nextUrl.pathname.startsWith('/auth')
 
-  // Redireciona para login se não autenticado
+  // Redireciona para login se não autenticado em rotas protegidas
   if ((isAdminRoute || isShopRoute) && !user) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // Verifica permissão de admin
+  // Rotas /admin — somente admins têm acesso
   if (isAdminRoute && user) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -45,9 +45,11 @@ export async function middleware(request: NextRequest) {
     if (profile?.role !== 'admin') {
       return NextResponse.redirect(new URL('/shop', request.url))
     }
+    // Admin pode acessar /admin normalmente — sem redirect extra
+    return supabaseResponse
   }
 
-  // Verifica se cliente está aprovado para acessar loja
+  // Rotas /shop — admin pode acessar livremente; clientes precisam estar aprovados
   if (isShopRoute && user) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -55,28 +57,24 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
+    // Admin acessa a loja sem restrição (visão de cliente)
     if (profile?.role === 'admin') {
-      return NextResponse.redirect(new URL('/admin', request.url))
+      return supabaseResponse
     }
 
+    // Cliente não aprovado vai para página de pendente
     if (profile?.status !== 'approved') {
       if (request.nextUrl.pathname !== '/shop/pending') {
         return NextResponse.redirect(new URL('/shop/pending', request.url))
       }
     }
+
+    return supabaseResponse
   }
 
-  // Se já autenticado, não deixa acessar login/registro
+  // Rotas /auth — usuário já logado vai para loja
+  // (admin não é mais forçado para /admin ao fazer login)
   if (isAuthRoute && user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role === 'admin') {
-      return NextResponse.redirect(new URL('/admin', request.url))
-    }
     return NextResponse.redirect(new URL('/shop', request.url))
   }
 

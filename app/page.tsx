@@ -7,15 +7,11 @@ export default async function PublicPage({ searchParams }: { searchParams: Promi
   const params = await searchParams
   const supabase = await createClient()
 
-  // Se logado, redireciona para área correta
+  // Se logado, vai direto para a loja (admin e cliente igualmente)
   const { data: { user } } = await supabase.auth.getUser()
-  if (user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (profile?.role === 'admin') redirect('/admin')
-    redirect('/shop')
-  }
+  if (user) redirect('/shop')
 
-  // Busca produtos — RLS agora permite visitantes verem
+  // Busca produtos — RLS permite visitantes verem
   let query = supabase
     .from('products')
     .select('id, name, slug, short_description, images, categories(name, id), featured, stock, compare_price')
@@ -132,7 +128,7 @@ export default async function PublicPage({ searchParams }: { searchParams: Promi
                   )}
                   {product.compare_price && (
                     <span className="absolute top-2 right-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500">
-                      -{Math.round(((product.compare_price - 0) / product.compare_price) * 100)}% OFF
+                      -{Math.round(((product.compare_price - product.price) / product.compare_price) * 100)}% OFF
                     </span>
                   )}
                 </div>
@@ -141,8 +137,6 @@ export default async function PublicPage({ searchParams }: { searchParams: Promi
                     <p className="text-[10px] font-semibold mb-1" style={{ color: '#4CAF50' }}>{(product.categories as any).name}</p>
                   )}
                   <p className="text-xs text-slate-900 font-medium leading-tight line-clamp-2 mb-3 flex-1">{product.name}</p>
-
-                  {/* Preço bloqueado para não logados */}
                   <Link href="/auth/register"
                     className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-bold transition-colors"
                     style={{ background: '#e8f5e9', color: '#1B5E20' }}>
