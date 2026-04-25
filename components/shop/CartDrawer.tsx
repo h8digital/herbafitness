@@ -23,7 +23,6 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [freeShippingThreshold, setFreeShippingThreshold] = useState<number | null>(null)
   const supabase = createClient()
 
-  // Busca configuração de frete grátis
   useEffect(() => {
     supabase
       .from('settings')
@@ -35,12 +34,17 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
       })
   }, [])
 
-  // Fecha com Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
     if (open) document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
+
+  useEffect(() => {
+    if (open) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
 
   return (
     <>
@@ -81,7 +85,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
           </button>
         </div>
 
-        {/* ── BARRA DE FRETE GRÁTIS ── */}
+        {/* Barra frete grátis */}
         {freeShippingThreshold && items.length > 0 && (
           <div className="pt-3">
             <FreeShippingBar threshold={freeShippingThreshold} />
@@ -110,18 +114,21 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                     <p className="text-sm font-medium text-slate-900 line-clamp-2 leading-tight">{item.product.name}</p>
                     <p className="text-sm font-bold mt-1" style={{ color: '#1B5E20' }}>{formatCurrency(item.product.price)}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <button onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity - 1)}
+                      <button
+                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                         className="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-sm"
                         style={{ background: '#e8f5e9', color: '#1B5E20' }}>
                         −
                       </button>
                       <span className="text-sm font-semibold w-4 text-center">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
+                      <button
+                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                         className="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-sm"
                         style={{ background: '#e8f5e9', color: '#1B5E20' }}>
                         +
                       </button>
-                      <button onClick={() => removeItem(item.product.id, item.product.name)}
+                      <button
+                        onClick={() => removeItem(item.product.id)}
                         className="ml-auto text-slate-300 hover:text-red-400 transition-colors">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -138,7 +145,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
           )}
         </div>
 
-        {/* Footer com total + botões */}
+        {/* Footer */}
         {items.length > 0 && (
           <div className="border-t px-6 py-4 space-y-3" style={{ borderColor: '#e8f5e9' }}>
             {couponDiscount > 0 && (

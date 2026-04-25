@@ -56,12 +56,12 @@ export default function CartPage() {
   }
 
   return (
-    <div className="px-4 py-4 space-y-4 max-w-2xl lg:max-w-4xl lg:mx-auto lg:px-6 lg:py-6">
+    <div className="px-4 py-4 space-y-4">
       <h1 className="font-black text-lg text-slate-900" style={{ fontFamily: 'Arial Black, sans-serif' }}>
         Meu Carrinho ({items.length})
       </h1>
 
-      {/* ── Barra de frete grátis ── */}
+      {/* Barra frete grátis */}
       {freeShippingThreshold && (
         <FreeShippingBar threshold={freeShippingThreshold} />
       )}
@@ -76,26 +76,25 @@ export default function CartPage() {
                 : <div className="w-full h-full flex items-center justify-center text-2xl">🌿</div>}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 leading-tight">{item.product.name}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{formatCurrency(item.product.price)} × {item.quantity}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <button onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity - 1)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center font-bold"
-                  style={{ background: '#e8f5e9', color: '#1B5E20' }}>−</button>
-                <span className="text-sm font-semibold w-5 text-center">{item.quantity}</span>
-                <button onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center font-bold"
-                  style={{ background: '#e8f5e9', color: '#1B5E20' }}>+</button>
-                <button onClick={() => removeItem(item.product.id, item.product.name)}
-                  className="ml-2 text-slate-300 hover:text-red-400 transition-colors">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+              <p className="text-sm font-medium text-slate-900 line-clamp-2">{item.product.name}</p>
+              <p className="font-black text-sm mt-1" style={{ color: '#1B5E20' }}>{formatCurrency(item.product.price)} cada</p>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center rounded-xl overflow-hidden border border-slate-200">
+                  <button
+                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                    className="w-8 h-7 flex items-center justify-center text-slate-600 font-bold text-lg">−</button>
+                  <span className="w-7 h-7 flex items-center justify-center text-sm font-bold text-slate-900">{item.quantity}</span>
+                  <button
+                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                    className="w-8 h-7 flex items-center justify-center text-slate-600 font-bold text-lg">+</button>
+                </div>
+                <button
+                  onClick={() => removeItem(item.product.id)}
+                  className="text-red-400 text-xs font-medium">Remover</button>
               </div>
             </div>
-            <div className="flex-shrink-0">
-              <p className="font-bold text-slate-900">{formatCurrency(item.product.price * item.quantity)}</p>
+            <div className="flex-shrink-0 text-right">
+              <p className="font-black text-sm" style={{ color: '#1B5E20' }}>{formatCurrency(item.product.price * item.quantity)}</p>
             </div>
           </div>
         ))}
@@ -103,7 +102,7 @@ export default function CartPage() {
 
       {/* Cupom */}
       <div className="bg-white rounded-2xl p-4">
-        <p className="text-sm font-semibold text-slate-700 mb-3">Cupom de desconto</p>
+        <p className="font-bold text-sm text-slate-900 mb-3">🎟️ Cupom de desconto</p>
         {couponCode ? (
           <div className="flex items-center gap-2">
             <span className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-green-700 bg-green-50 border border-green-200">
@@ -128,7 +127,7 @@ export default function CartPage() {
         )}
       </div>
 
-      {/* Resumo + checkout */}
+      {/* Resumo */}
       <div className="bg-white rounded-2xl p-4 space-y-2">
         <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
         {couponDiscount > 0 && (
