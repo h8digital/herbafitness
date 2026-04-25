@@ -3,8 +3,9 @@
 import { useCartStore, calcSubtotal, calcTotal } from '@/store/cart'
 import { formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import FreeShippingBar from '@/components/shop/FreeShippingBar'
 
 export default function CartPage() {
   const items = useCartStore(s => s.items)
@@ -22,7 +23,13 @@ export default function CartPage() {
   const [couponInput, setCouponInput] = useState('')
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError, setCouponError] = useState('')
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number | null>(null)
   const supabase = createClient()
+
+  useEffect(() => {
+    supabase.from('settings').select('free_shipping_above').eq('id', 'default').single()
+      .then(({ data }) => { if (data?.free_shipping_above) setFreeShippingThreshold(data.free_shipping_above) })
+  }, [])
 
   async function applyDiscount() {
     if (!couponInput.trim()) return
@@ -49,10 +56,15 @@ export default function CartPage() {
   }
 
   return (
-    <div className="px-4 py-4 space-y-4">
+    <div className="px-4 py-4 space-y-4 max-w-2xl lg:max-w-4xl lg:mx-auto lg:px-6 lg:py-6">
       <h1 className="font-black text-lg text-slate-900" style={{ fontFamily: 'Arial Black, sans-serif' }}>
         Meu Carrinho ({items.length})
       </h1>
+
+      {/* ── Barra de frete grátis ── */}
+      {freeShippingThreshold && (
+        <FreeShippingBar threshold={freeShippingThreshold} />
+      )}
 
       {/* Itens */}
       <div className="space-y-3">
@@ -64,21 +76,26 @@ export default function CartPage() {
                 : <div className="w-full h-full flex items-center justify-center text-2xl">🌿</div>}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 line-clamp-2">{item.product.name}</p>
-              <p className="font-black text-sm mt-1" style={{ color: '#1B5E20' }}>{formatCurrency(item.product.price)} cada</p>
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center rounded-xl overflow-hidden border border-slate-200">
-                  <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                    className="w-8 h-7 flex items-center justify-center text-slate-600 font-bold text-lg">−</button>
-                  <span className="w-7 h-7 flex items-center justify-center text-sm font-bold text-slate-900">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                    className="w-8 h-7 flex items-center justify-center text-slate-600 font-bold text-lg">+</button>
-                </div>
-                <button onClick={() => removeItem(item.product.id)} className="text-red-400 text-xs font-medium">Remover</button>
+              <p className="text-sm font-medium text-slate-900 leading-tight">{item.product.name}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{formatCurrency(item.product.price)} × {item.quantity}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <button onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity - 1)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center font-bold"
+                  style={{ background: '#e8f5e9', color: '#1B5E20' }}>−</button>
+                <span className="text-sm font-semibold w-5 text-center">{item.quantity}</span>
+                <button onClick={() => updateQuantity(item.product.id, item.product.name, item.quantity + 1)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center font-bold"
+                  style={{ background: '#e8f5e9', color: '#1B5E20' }}>+</button>
+                <button onClick={() => removeItem(item.product.id, item.product.name)}
+                  className="ml-2 text-slate-300 hover:text-red-400 transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
               </div>
             </div>
-            <div className="flex-shrink-0 text-right">
-              <p className="font-black text-sm" style={{ color: '#1B5E20' }}>{formatCurrency(item.product.price * item.quantity)}</p>
+            <div className="flex-shrink-0">
+              <p className="font-bold text-slate-900">{formatCurrency(item.product.price * item.quantity)}</p>
             </div>
           </div>
         ))}
@@ -86,66 +103,49 @@ export default function CartPage() {
 
       {/* Cupom */}
       <div className="bg-white rounded-2xl p-4">
-        <p className="font-bold text-sm text-slate-900 mb-3">🎟️ Cupom de desconto</p>
+        <p className="text-sm font-semibold text-slate-700 mb-3">Cupom de desconto</p>
         {couponCode ? (
-          <div className="flex items-center justify-between bg-green-50 rounded-xl px-4 py-3 border border-green-200">
-            <div>
-              <p className="font-mono font-bold text-green-800 text-sm">{couponCode}</p>
-              <p className="text-xs text-green-600 mt-0.5">-{formatCurrency(couponDiscount)}</p>
-            </div>
-            <button onClick={removeCoupon} className="text-red-400 font-bold text-lg">✕</button>
+          <div className="flex items-center gap-2">
+            <span className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-green-700 bg-green-50 border border-green-200">
+              ✓ {couponCode} aplicado!
+            </span>
+            <button onClick={removeCoupon} className="text-slate-400 hover:text-red-400 text-xs px-3 py-2">Remover</button>
           </div>
         ) : (
           <>
             <div className="flex gap-2">
-              <input value={couponInput} onChange={e => setCouponInput(e.target.value)}
-                placeholder="Digite o código"
-                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-green-500" />
+              <input value={couponInput} onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                placeholder="CÓDIGO DO CUPOM"
+                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-400 bg-white tracking-widest" />
               <button onClick={applyDiscount} disabled={couponLoading}
-                className="text-white font-bold px-4 py-2.5 rounded-xl text-sm disabled:opacity-60"
+                className="px-5 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
                 style={{ background: '#1B5E20' }}>
-                Aplicar
+                {couponLoading ? '...' : 'Aplicar'}
               </button>
             </div>
-            {couponError && <p className="text-red-500 text-xs mt-2">{couponError}</p>}
+            {couponError && <p className="text-xs text-red-500 mt-1">{couponError}</p>}
           </>
         )}
       </div>
 
-      {/* Resumo */}
+      {/* Resumo + checkout */}
       <div className="bg-white rounded-2xl p-4 space-y-2">
-        <h3 className="font-bold text-sm text-slate-900 mb-3">Resumo do Pedido</h3>
-        {items.map(item => (
-          <div key={item.product.name + item.product.id} className="flex justify-between text-xs text-slate-500">
-            <span className="truncate mr-2">{item.quantity}x {item.product.name}</span>
-            <span className="flex-shrink-0 font-medium">{formatCurrency(item.product.price * item.quantity)}</span>
-          </div>
-        ))}
-        <div className="border-t border-slate-100 pt-2 mt-2 space-y-1.5">
-          <div className="flex justify-between text-sm text-slate-600">
-            <span>Subtotal</span><span className="font-semibold">{formatCurrency(subtotal)}</span>
-          </div>
-          {couponDiscount > 0 && (
-            <div className="flex justify-between text-sm text-green-600">
-              <span>Desconto ({couponCode})</span><span>-{formatCurrency(couponDiscount)}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-sm text-slate-600">
-            <span>Frete</span>
-            <span>{selectedShipping ? formatCurrency(selectedShipping.price) : 'Calculado no checkout'}</span>
-          </div>
-          <div className="flex justify-between font-black text-slate-900 text-base pt-1.5 border-t border-slate-200">
-            <span>Total</span>
-            <span style={{ color: '#1B5E20' }}>{formatCurrency(total)}</span>
-          </div>
+        <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+        {couponDiscount > 0 && (
+          <div className="flex justify-between text-sm text-green-600"><span>Desconto ({couponCode})</span><span>-{formatCurrency(couponDiscount)}</span></div>
+        )}
+        <div className="flex justify-between text-sm text-slate-600">
+          <span>Frete</span><span className="text-slate-400">calculado no checkout</span>
         </div>
+        <div className="flex justify-between font-bold text-slate-900 text-base pt-2 border-t border-slate-100">
+          <span>Total estimado</span><span>{formatCurrency(subtotal - couponDiscount)}</span>
+        </div>
+        <Link href="/shop/checkout"
+          className="block w-full text-center text-white font-black py-4 rounded-xl mt-2"
+          style={{ background: 'linear-gradient(135deg, #1B5E20, #4CAF50)' }}>
+          Finalizar Compra →
+        </Link>
       </div>
-
-      <Link href="/shop/checkout"
-        className="flex items-center justify-center w-full text-white font-black py-4 rounded-2xl text-sm"
-        style={{ background: 'linear-gradient(135deg, #1B5E20, #4CAF50)' }}>
-        Ir para o Checkout →
-      </Link>
     </div>
   )
 }

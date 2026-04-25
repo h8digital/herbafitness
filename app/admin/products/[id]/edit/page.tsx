@@ -65,6 +65,18 @@ export default async function EditProductPage({
           <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${product.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
             {product.active ? '● Ativo' : '○ Inativo'}
           </span>
+          {/* ── BOTÃO VISUALIZAR ── */}
+          <Link
+            href={`/shop/products/${product.slug}`}
+            target="_blank"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold transition-colors border"
+            style={{ background: '#f0faf0', color: '#1B5E20', borderColor: '#c8e6c9' }}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Visualizar na Loja
+          </Link>
         </div>
       </div>
 
@@ -100,7 +112,6 @@ export default async function EditProductPage({
 
       {section === 'variacoes' && (
         <div className="max-w-2xl">
-          {/* Instruções */}
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-6">
             <h3 className="font-bold text-blue-900 mb-2">🎨 Como usar Variações</h3>
             <ol className="space-y-1.5 text-sm text-blue-700">
