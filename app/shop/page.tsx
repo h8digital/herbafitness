@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCurrency } from '@/lib/utils'
 import ProductCard from '@/components/shop/ProductCard'
 import DesktopSidebar from '@/components/shop/desktop/DesktopSidebar'
+import FeaturedSlider from '@/components/shop/FeaturedSlider'
+import SocialFloat from '@/components/shop/SocialFloat'
 import Link from 'next/link'
 import ZipModal from '@/components/shop/ZipModal'
 
@@ -21,6 +23,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
     { data: featured },
     { data: recentViews },
     { data: wishlistItems },
+    { data: settings },
   ] = await Promise.all([
     query,
     supabase.from('categories').select('*').eq('active', true).order('sort_order'),
@@ -30,6 +33,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
       : Promise.resolve({ data: [] }),
     user ? supabase.from('wishlist').select('product_id').eq('customer_id', user.id)
       : Promise.resolve({ data: [] }),
+    supabase.from('settings').select('whatsapp_number, instagram_url, facebook_url, tiktok_url, youtube_url, twitter_url').eq('id', 'default').single(),
   ])
 
   const recentProducts = (recentViews || []).map((v: any) => v.product).filter(Boolean)
@@ -40,7 +44,17 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
     <>
       <ZipModal />
 
-      {/* ── SIDEBAR DESKTOP (só >= lg) ─────────────────────────── */}
+      {/* Widget flutuante de redes sociais */}
+      <SocialFloat
+        whatsapp={settings?.whatsapp_number}
+        instagram={settings?.instagram_url}
+        facebook={settings?.facebook_url}
+        tiktok={settings?.tiktok_url}
+        youtube={settings?.youtube_url}
+        twitter={settings?.twitter_url}
+      />
+
+      {/* Sidebar desktop */}
       <div className="hidden lg:block">
         <DesktopSidebar
           categories={categories || []}
@@ -49,31 +63,12 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
         />
       </div>
 
-      {/* ── CONTEÚDO PRINCIPAL ─────────────────────────────────── */}
+      {/* Conteúdo principal */}
       <div className="flex-1 min-w-0 pb-4 lg:pb-8">
 
-        {/* Banner destaque */}
+        {/* Slide de destaques */}
         {!isFiltered && featured && featured.length > 0 && (
-          <div className="px-4 pt-4 lg:pt-6 lg:px-6">
-            <div className="rounded-2xl overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #1B5E20, #4CAF50)', minHeight: 120 }}>
-              <div className="p-5 lg:p-8">
-                <p className="text-white/80 text-xs font-medium uppercase tracking-wide mb-1">Destaque</p>
-                <p className="text-white font-black text-lg lg:text-2xl leading-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
-                  {featured[0].name}
-                </p>
-                <p className="text-white/90 text-sm lg:text-base mt-1 font-semibold">{formatCurrency(featured[0].price)}</p>
-                <Link href={`/shop/products/${featured[0].slug}`}
-                  className="mt-3 inline-block bg-white text-xs lg:text-sm font-bold px-4 py-2 rounded-xl"
-                  style={{ color: '#1B5E20' }}>
-                  Ver produto →
-                </Link>
-              </div>
-              {featured[0].images?.[0]?.url && (
-                <img src={featured[0].images[0].url} alt={featured[0].name}
-                  className="absolute right-0 top-0 h-full w-32 lg:w-48 object-contain opacity-30" />
-              )}
-            </div>
-          </div>
+          <FeaturedSlider products={featured as any} />
         )}
 
         {/* Últimos vistos */}
@@ -101,7 +96,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
           </div>
         )}
 
-        {/* Categorias scroll horizontal — só no mobile */}
+        {/* Categorias scroll — só mobile */}
         {!params.q && (
           <div className="pt-4 pb-2 lg:hidden">
             <div className="flex gap-2 px-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
@@ -122,7 +117,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
           </div>
         )}
 
-        {/* Header seção + resultado busca */}
+        {/* Header seção */}
         <div className="px-4 lg:px-6 pt-3 pb-3 flex items-center justify-between">
           {params.q ? (
             <>
@@ -142,23 +137,18 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
           )}
         </div>
 
-        {/* Grid — 2 cols mobile, 3 cols md, 4 cols xl */}
+        {/* Grid */}
         {products && products.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 px-4 lg:px-6">
             {products.map((product: any) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                initialFavorited={favoritedIds.has(product.id)}
-              />
+              <ProductCard key={product.id} product={product} initialFavorited={favoritedIds.has(product.id)} />
             ))}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <span className="text-5xl mb-3">🔍</span>
             <p className="font-bold text-slate-700 text-center">Nenhum produto encontrado</p>
-            <a href="/shop" className="mt-4 px-6 py-2.5 rounded-xl text-sm font-semibold text-white"
-              style={{ background: '#1B5E20' }}>Ver todos</a>
+            <a href="/shop" className="mt-4 px-6 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#1B5E20' }}>Ver todos</a>
           </div>
         )}
       </div>
