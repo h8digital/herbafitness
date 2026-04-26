@@ -92,7 +92,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <>
       {/* ── ProductViewTracker com prop correta: customerId ── */}
-      <ProductViewTracker productId={product.id} customerId={user?.id} />
+      {user?.id && <ProductViewTracker productId={product.id} customerId={user.id} />}
 
       <div className="pb-16 lg:pb-20">
         {/* Breadcrumb */}
