@@ -880,7 +880,7 @@ export default function CheckoutPage() {
           <OrderSummary
             items={items}
             subtotal={subtotal}
-            couponCode={couponCode}
+            couponCode={couponCode ?? ""}
             couponDiscount={couponDiscount}
             shipping={effectiveShipping}
             freeShippingThreshold={freeThreshold}
